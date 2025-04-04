@@ -5,13 +5,11 @@
 #include <GLFW/glfw3.h>
 
 #include "Instrumentor.h"
+#include "Geometry.h"
+#include "RenderGeometry.h"
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-const unsigned int NUM_COMPONENTS_IN_PIXEL = 4;
 
 const char* vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -26,49 +24,11 @@ const char* vertexShaderSource = "#version 330 core\n"
 const char* fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor;\n"
 "in vec2 TexCoord;\n"
-"uniform sampler2D texture1;\n"
+"uniform sampler2D ourTexture;\n"
 "void main()\n"
 "{\n"
-"    FragColor = texture(texture1, TexCoord);\n"
+"    FragColor = texture(ourTexture, TexCoord);\n"
 "}\n\0";
-
-bool pressedRight = false;
-bool pressedLeft = false;
-bool pressedUp = false;
-bool pressedDown = false;
-
-const int lineThickness = 2;
-
-struct Colour {
-
-public:
-
-    unsigned char r;
-    unsigned char g;
-    unsigned char b;
-    unsigned char a;
-};
-
-int GetRedFlattenedImageDataSlotForPixel(int pixelX, int pixelY, int imageSizeX) {
-    return (pixelX + pixelY * imageSizeX) * 4;
-}
-
-void FillSubPixels(std::vector<unsigned char>& imageData, int centreX, int centreY, int halfSizeMinusOne, Colour colourToFillWith) {
-    for (int x = -halfSizeMinusOne; x < halfSizeMinusOne; x++)
-    {
-        for (int y = -halfSizeMinusOne; y < halfSizeMinusOne; y++)
-        {
-            int index = GetRedFlattenedImageDataSlotForPixel(centreX + x, centreY + y, SCR_WIDTH);
-            if (index >= 0 && (index + 3) < imageData.size()) {
-
-                imageData[index + 0] = colourToFillWith.r;
-                imageData[index + 1] = colourToFillWith.g;
-                imageData[index + 2] = colourToFillWith.b;
-                imageData[index + 3] = colourToFillWith.a;
-            }
-        }
-    }
-}
 
 void ClearImage(std::vector<unsigned char>& imageData, int width, int height, Colour clearColour) {
 
@@ -85,47 +45,22 @@ void ClearImage(std::vector<unsigned char>& imageData, int width, int height, Co
     }
 }
 
-void DrawLine(std::vector<unsigned char>& imageData, int x0, int y0, int x1, int y1, int lineThickness, Colour lineColour) {
+bool pressedRight = false;
+bool pressedLeft = false;
+bool pressedUp = false;
+bool pressedDown = false;
 
-    PROFILE_FUNCTION();
+const int lineThickness = 2;
 
-    bool steep = false;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
 
-    if (std::abs(x0 - x1) < std::abs(y0 - y1)) 
-    {
-        std::swap(x0, y0);
-        std::swap(x1, y1);
-        steep = true;
-    }
-    if (x0 > x1) {
-        std::swap(x0, x1);
-        std::swap(y0, y1);
-    }
-
-    float dx = (float)(x1 - x0);
-    float dy = (float)(y1 - y0);
-
-    if (steep)
-    {
-        for (int x = x0; x <= x1; x++) {
-
-            float t = (x - x0) / dx;
-            int y = y0 + dy * t;
-
-            FillSubPixels(imageData, y, x, lineThickness, lineColour);
-        }
-    }
-    else
-    {
-        for (int x = x0; x <= x1; x++) {
-
-            float t = (x - x0) / dx;
-            int y = y0 + dy * t;
-
-            FillSubPixels(imageData, x, y, lineThickness, lineColour);
-        }
-    }
-}
+const float distToNearPlane = 0.1f;
+const float distToFarPlane = 1000.0f;
+const float fov = 90.0f;
+const float aspectRatio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
+const float aspectRatioR = (float)SCR_HEIGHT / (float)SCR_WIDTH;
+const float oneOverFOV = 1.0f / glm::tan(glm::radians(fov * 0.5f));
 
 int main()
 {
@@ -136,6 +71,16 @@ int main()
     Colour green = { 0, 255, 0, 255 };
     Colour blue = { 0, 0, 255, 255 };
     Colour playerColour = { 255, 0, 0, 255 };
+
+    Mat4x4 perspectiveProjectionMatrix = glm::perspective(glm::radians(fov * 0.5f), aspectRatio, distToNearPlane, distToFarPlane);
+    //Mat4x4 perspectiveProjectionMatrix = glm::mat4(1.0);
+    Mat4x4 calculatedPerspectiveProjectionMatrix = glm::mat4(0.0f);
+    calculatedPerspectiveProjectionMatrix[0][0] = aspectRatioR * oneOverFOV;
+    calculatedPerspectiveProjectionMatrix[1][1] = oneOverFOV;
+    calculatedPerspectiveProjectionMatrix[2][2] = distToFarPlane / (distToFarPlane - distToNearPlane);
+    calculatedPerspectiveProjectionMatrix[3][2] = (-distToFarPlane * distToNearPlane) / (distToFarPlane - distToNearPlane);
+    calculatedPerspectiveProjectionMatrix[2][3] = 1.0f;
+    calculatedPerspectiveProjectionMatrix[3][3] = 0.0f;
 
     std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
     ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
@@ -250,6 +195,10 @@ int main()
     int curPosX = SCR_WIDTH / 2;
     int curPosY = SCR_HEIGHT / 2;
 
+    float zCoord = 30.0f;
+    Triangle simpleWorldTriangle = Triangle{ Point{{1.0f, 0.0f, zCoord}}, Point{{0.0f, 1.0f, zCoord}}, Point{{-1.0f, 0.0f, zCoord}} };
+    //LineSegment simpleWorldLineSegment = LineSegment{ Point{{10.0f, 0.0f, 0.0f}}, Point{{-10.0f, 0.0f, 0.0f}} };
+
     while (!glfwWindowShouldClose(window))
     {
         PROFILE_SCOPE("GAME LOOP.");
@@ -258,9 +207,12 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-        DrawLine(imageData, 13, 20, 80, 40, lineThickness, red);
-        DrawLine(imageData, 20, 13, 40, 80, lineThickness, green);
-        DrawLine(imageData, 80, 40, 13, 20, lineThickness, blue);
+
+        //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 15, 0 }, { 100, 90, 0 }, lineThickness, red);
+        DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, perspectiveProjectionMatrix, lineThickness, red);
+        //DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, calculatedPerspectiveProjectionMatrix, lineThickness, red);
+        //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 0, 0 }, { 20, 0, 0 }, lineThickness, red);
+        //DrawLineSegmentOnScreenFromWorldLineSegment(imageData, SCR_WIDTH, simpleWorldLineSegment, perspectiveProjectionMatrix, lineThickness, blue);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
