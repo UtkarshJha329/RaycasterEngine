@@ -1,8 +1,10 @@
-#include <iostream>
+﻿#include <iostream>
 #include <vector>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "Instrumentor.h"
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -35,6 +37,8 @@ bool pressedLeft = false;
 bool pressedUp = false;
 bool pressedDown = false;
 
+const int lineThickness = 2;
+
 struct Colour {
 
 public:
@@ -66,46 +70,75 @@ void FillSubPixels(std::vector<unsigned char>& imageData, int centreX, int centr
     }
 }
 
+void ClearImage(std::vector<unsigned char>& imageData, int width, int height, Colour clearColour) {
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            int curIndex = (x + (y * width)) * NUM_COMPONENTS_IN_PIXEL;
+            imageData[curIndex + 0] = clearColour.r;
+            imageData[curIndex + 1] = clearColour.g;
+            imageData[curIndex + 2] = clearColour.b;
+            imageData[curIndex + 3] = clearColour.a;
+        }
+    }
+}
+
+void DrawLine(std::vector<unsigned char>& imageData, int x0, int y0, int x1, int y1, int lineThickness, Colour lineColour) {
+
+    PROFILE_FUNCTION();
+
+    bool steep = false;
+
+    if (std::abs(x0 - x1) < std::abs(y0 - y1)) 
+    {
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+        steep = true;
+    }
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+
+    float dx = (float)(x1 - x0);
+    float dy = (float)(y1 - y0);
+
+    if (steep)
+    {
+        for (int x = x0; x <= x1; x++) {
+
+            float t = (x - x0) / dx;
+            int y = y0 + dy * t;
+
+            FillSubPixels(imageData, y, x, lineThickness, lineColour);
+        }
+    }
+    else
+    {
+        for (int x = x0; x <= x1; x++) {
+
+            float t = (x - x0) / dx;
+            int y = y0 + dy * t;
+
+            FillSubPixels(imageData, x, y, lineThickness, lineColour);
+        }
+    }
+}
+
 int main()
 {
+    Instrumentor::Instance().BeginSession("Simple Software Renderer.");
+
     Colour backgroundColour = { 255, 255, 255, 255 };
+    Colour red = { 255, 0, 0, 255 };
+    Colour green = { 0, 255, 0, 255 };
+    Colour blue = { 0, 0, 255, 255 };
     Colour playerColour = { 255, 0, 0, 255 };
 
     std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
-    //for (int i = 0; i < SCR_HEIGHT * SCR_WIDTH * NUM_COMPONENTS_IN_PIXEL; i += 4)
-    //{
-    //    imageData[i + 0] = backgroundColour.r;
-    //    imageData[i + 1] = backgroundColour.g;
-    //    imageData[i + 2] = backgroundColour.b;
-    //    imageData[i + 3] = backgroundColour.a;
-    //}
-
-    //for (int y = 0; y < SCR_HEIGHT; y++)
-    //{
-    //    for (int x = 0; x < SCR_WIDTH; x++)
-    //    {
-    //        unsigned char curColourFracR = (unsigned char)((x / (float)SCR_WIDTH) * 255.0f);
-    //        unsigned char curColourFracG = (unsigned char)((y / (float)SCR_HEIGHT) * 255.0f);
-
-    //        int curIndexR = (x + (y * SCR_WIDTH)) * NUM_COMPONENTS_IN_PIXEL;
-    //        imageData[curIndexR + 0] = curColourFracR;
-    //        imageData[curIndexR + 1] = curColourFracG;
-    //        imageData[curIndexR + 2] = 0;
-    //        imageData[curIndexR + 3] = 255;
-    //    }
-    //}
-
-    for (int y = 0; y < SCR_HEIGHT; y++)
-    {
-        for (int x = 0; x < SCR_WIDTH; x++)
-        {
-            int curIndexR = (x + (y * SCR_WIDTH)) * NUM_COMPONENTS_IN_PIXEL;
-            imageData[curIndexR + 0] = backgroundColour.r;
-            imageData[curIndexR + 1] = backgroundColour.g;
-            imageData[curIndexR + 2] = backgroundColour.b;
-            imageData[curIndexR + 3] = backgroundColour.a;
-        }
-    }
+    ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -219,10 +252,64 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
+        PROFILE_SCOPE("GAME LOOP.");
+
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
+        DrawLine(imageData, 13, 20, 80, 40, lineThickness, red);
+        DrawLine(imageData, 20, 13, 40, 80, lineThickness, green);
+        DrawLine(imageData, 80, 40, 13, 20, lineThickness, blue);
+
         glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+
+        frame++;
+    }
+
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteProgram(shaderProgram);
+
+    glfwTerminate();
+
+    Instrumentor::Instance().EndSession();
+    return 0;
+}
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    pressedRight = pressedRight ? (key == GLFW_KEY_RIGHT && action != GLFW_RELEASE) : (key == GLFW_KEY_RIGHT && action == GLFW_PRESS);
+    pressedLeft = pressedLeft ? (key == GLFW_KEY_LEFT && action != GLFW_RELEASE) : (key == GLFW_KEY_LEFT && action == GLFW_PRESS);
+    pressedUp = pressedUp ? (key == GLFW_KEY_UP && action != GLFW_RELEASE) : (key == GLFW_KEY_UP && action == GLFW_PRESS);
+    pressedDown = pressedDown ? (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) : (key == GLFW_KEY_DOWN && action == GLFW_PRESS);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    // make sure the viewport matches the new window dimensions; note that width and 
+    // height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
+}
+
+/*
         if (frame % 10 == 0) {
 
             int oldPixelLocation = (curPosX + (curPosY * SCR_WIDTH)) * NUM_COMPONENTS_IN_PIXEL;
@@ -251,44 +338,4 @@ int main()
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
             glGenerateMipmap(GL_TEXTURE_2D);
         }
-
-        glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-
-        frame++;
-    }
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shaderProgram);
-
-    glfwTerminate();
-    return 0;
-}
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
-    pressedRight = pressedRight ? (key == GLFW_KEY_RIGHT && action != GLFW_RELEASE) : (key == GLFW_KEY_RIGHT && action == GLFW_PRESS);
-    pressedLeft = pressedLeft ? (key == GLFW_KEY_LEFT && action != GLFW_RELEASE) : (key == GLFW_KEY_LEFT && action == GLFW_PRESS);
-    pressedUp = pressedUp ? (key == GLFW_KEY_UP && action != GLFW_RELEASE) : (key == GLFW_KEY_UP && action == GLFW_PRESS);
-    pressedDown = pressedDown ? (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) : (key == GLFW_KEY_DOWN && action == GLFW_PRESS);
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
-}
+*/
