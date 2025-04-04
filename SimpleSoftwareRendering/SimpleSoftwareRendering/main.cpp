@@ -1,6 +1,8 @@
 ﻿#include <iostream>
 #include <vector>
 
+#include <chrono>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -74,13 +76,13 @@ int main()
 
     Mat4x4 perspectiveProjectionMatrix = glm::perspective(glm::radians(fov * 0.5f), aspectRatio, distToNearPlane, distToFarPlane);
     //Mat4x4 perspectiveProjectionMatrix = glm::mat4(1.0);
-    Mat4x4 calculatedPerspectiveProjectionMatrix = glm::mat4(0.0f);
-    calculatedPerspectiveProjectionMatrix[0][0] = aspectRatioR * oneOverFOV;
-    calculatedPerspectiveProjectionMatrix[1][1] = oneOverFOV;
-    calculatedPerspectiveProjectionMatrix[2][2] = distToFarPlane / (distToFarPlane - distToNearPlane);
-    calculatedPerspectiveProjectionMatrix[3][2] = (-distToFarPlane * distToNearPlane) / (distToFarPlane - distToNearPlane);
-    calculatedPerspectiveProjectionMatrix[2][3] = 1.0f;
-    calculatedPerspectiveProjectionMatrix[3][3] = 0.0f;
+    //Mat4x4 calculatedPerspectiveProjectionMatrix = glm::mat4(0.0f);
+    //calculatedPerspectiveProjectionMatrix[0][0] = aspectRatioR * oneOverFOV;
+    //calculatedPerspectiveProjectionMatrix[1][1] = oneOverFOV;
+    //calculatedPerspectiveProjectionMatrix[2][2] = distToFarPlane / (distToFarPlane - distToNearPlane);
+    //calculatedPerspectiveProjectionMatrix[3][2] = (-distToFarPlane * distToNearPlane) / (distToFarPlane - distToNearPlane);
+    //calculatedPerspectiveProjectionMatrix[2][3] = 1.0f;
+    //calculatedPerspectiveProjectionMatrix[3][3] = 0.0f;
 
     std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
     ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
@@ -195,13 +197,35 @@ int main()
     int curPosX = SCR_WIDTH / 2;
     int curPosY = SCR_HEIGHT / 2;
 
-    float zCoord = 30.0f;
+    float zCoord = 0.0f;
     Triangle simpleWorldTriangle = Triangle{ Point{{1.0f, 0.0f, zCoord}}, Point{{0.0f, 1.0f, zCoord}}, Point{{-1.0f, 0.0f, zCoord}} };
     //LineSegment simpleWorldLineSegment = LineSegment{ Point{{10.0f, 0.0f, 0.0f}}, Point{{-10.0f, 0.0f, 0.0f}} };
 
+    Vector3 trianglePosition = { 0.0f, 0.0f, 10.0f };
+
+    float angle = 0.0f;
+
+    auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
     {
         PROFILE_SCOPE("GAME LOOP.");
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> deltaTime = currentTime - previousTime;
+        //std::cout << deltaTime.count() << std::endl;
+
+        angle += (float)deltaTime.count() * 0.1f;
+        if (angle >= 360.0f) {
+            angle -= 360.0f;
+        }
+
+        Mat4x4 modelMat = glm::identity<Mat4x4>();
+        modelMat = glm::translate(modelMat, trianglePosition);
+        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
+        modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
+        Triangle transformedTriangle = ApplyTransformToTriangle(simpleWorldTriangle, modelMat);
+
+        //RotateTrianglePoints(simpleWorldTriangle, trianglePosition, Vector3{0.0f, 0.0f, 1.0f}, deltaTime.count() * 0.05f);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -209,7 +233,8 @@ int main()
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
 
         //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 15, 0 }, { 100, 90, 0 }, lineThickness, red);
-        DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, perspectiveProjectionMatrix, lineThickness, red);
+        DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, transformedTriangle, perspectiveProjectionMatrix, lineThickness, red);
+        //TempDrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, angle, perspectiveProjectionMatrix, angle, lineThickness, red);
         //DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, calculatedPerspectiveProjectionMatrix, lineThickness, red);
         //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 0, 0 }, { 20, 0, 0 }, lineThickness, red);
         //DrawLineSegmentOnScreenFromWorldLineSegment(imageData, SCR_WIDTH, simpleWorldLineSegment, perspectiveProjectionMatrix, lineThickness, blue);
@@ -226,6 +251,7 @@ int main()
         glfwPollEvents();
 
         frame++;
+        previousTime = currentTime;
     }
 
     glDeleteVertexArrays(1, &VAO);

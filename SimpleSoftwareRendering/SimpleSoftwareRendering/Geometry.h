@@ -66,3 +66,14 @@ public:
 
 	std::vector<Triangle> triangles;
 };
+
+Triangle ApplyTransformToTriangle(Triangle curTriangle, Mat4x4& transformMatrix) {
+
+	curTriangle.a.position = transformMatrix * Vector4(curTriangle.a.position, 1.0f);
+	curTriangle.b.position = transformMatrix * Vector4(curTriangle.b.position, 1.0f);
+	curTriangle.c.position = transformMatrix * Vector4(curTriangle.c.position, 1.0f);
+
+	Triangle transformedTriangle = curTriangle;
+
+	return transformedTriangle;
+}
