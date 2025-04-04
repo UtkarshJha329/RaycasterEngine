@@ -197,11 +197,76 @@ int main()
     int curPosX = SCR_WIDTH / 2;
     int curPosY = SCR_HEIGHT / 2;
 
-    float zCoord = 0.0f;
-    Triangle simpleWorldTriangle = Triangle{ Point{{1.0f, 0.0f, zCoord}}, Point{{0.0f, 1.0f, zCoord}}, Point{{-1.0f, 0.0f, zCoord}} };
-    //LineSegment simpleWorldLineSegment = LineSegment{ Point{{10.0f, 0.0f, 0.0f}}, Point{{-10.0f, 0.0f, 0.0f}} };
+    //float zCoord = 0.0f;
+    //Triangle simpleWorldTriangle = Triangle{ Point{{1.0f, 0.0f, zCoord}}, Point{{0.0f, 1.0f, zCoord}}, Point{{-1.0f, 0.0f, zCoord}} };
+    ////LineSegment simpleWorldLineSegment = LineSegment{ Point{{10.0f, 0.0f, 0.0f}}, Point{{-10.0f, 0.0f, 0.0f}} };
 
-    Vector3 trianglePosition = { 0.0f, 0.0f, 10.0f };
+    //Vector3 trianglePosition = { 0.0f, 0.0f, 10.0f };
+
+    Mesh simpleTriangle =
+    {
+        { 
+            // SOUTH
+            //{ Point{{0.0f, 0.0f, 0.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
+            //{ Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
+
+            //// EAST                                                      
+            //{ Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
+            //{ Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 0.0f, 1.0f}} },
+
+            //// NORTH                                                     
+            //{ Point{{1.0f, 0.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}} },
+            //{ Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}} },
+
+            //// WEST                                                      
+            //{ Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}} },
+            //{ Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
+
+            //// TOP                                                       
+            //{ Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
+            //{ Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
+
+            //// BOTTOM                                                    
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
+        }
+    };
+    Vector3 simpleTrianglePosition = { 0.0f, 0.0f, 5.0f };
+
+    Mesh cubeMesh = 
+    {
+        {
+            // SOUTH
+            { Point{{0.0f, 0.0f, 0.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
+            { Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
+
+            // EAST                                                      
+            { Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
+            { Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 0.0f, 1.0f}} },
+
+            // NORTH                                                     
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}} },
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}} },
+
+            // WEST                                                      
+            { Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}} },
+            { Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
+
+            // TOP                                                       
+            { Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
+            { Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
+
+            // BOTTOM                                                    
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
+            { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
+        }
+    };
+
+    Vector3 cubePosition = { 0.0f, 0.0f, 5.0f };
+
+    Vector3 cameraPosition = { 0.0f, 0.0f, 0.0f };
+
+    Vector3 rotationAxis = { 0.0f, 0.0f, 0.0f };
 
     float angle = 0.0f;
 
@@ -214,30 +279,25 @@ int main()
         std::chrono::duration<double, std::milli> deltaTime = currentTime - previousTime;
         //std::cout << deltaTime.count() << std::endl;
 
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
+
         angle += (float)deltaTime.count() * 0.1f;
         if (angle >= 360.0f) {
             angle -= 360.0f;
         }
 
         Mat4x4 modelMat = glm::identity<Mat4x4>();
-        modelMat = glm::translate(modelMat, trianglePosition);
-        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
+        modelMat = glm::translate(modelMat, cubePosition);
+        //modelMat = glm::translate(modelMat, simpleTrianglePosition);
+        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 1.0f, 0.0f, 1.0f });
+        //modelMat = glm::rotate(modelMat, glm::radians(90.0f), Vector3{ 1.0f, 0.0f, 1.0f });
         modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
-        Triangle transformedTriangle = ApplyTransformToTriangle(simpleWorldTriangle, modelMat);
 
-        //RotateTrianglePoints(simpleWorldTriangle, trianglePosition, Vector3{0.0f, 0.0f, 1.0f}, deltaTime.count() * 0.05f);
-
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-
-        //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 15, 0 }, { 100, 90, 0 }, lineThickness, red);
-        DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, transformedTriangle, perspectiveProjectionMatrix, lineThickness, red);
-        //TempDrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, angle, perspectiveProjectionMatrix, angle, lineThickness, red);
-        //DrawTriangleOnScreenFromWorldTriangle(imageData, SCR_WIDTH, SCR_HEIGHT, simpleWorldTriangle, calculatedPerspectiveProjectionMatrix, lineThickness, red);
-        //DrawLineSegmentOnScreen(imageData, SCR_WIDTH, { 10, 0, 0 }, { 20, 0, 0 }, lineThickness, red);
-        //DrawLineSegmentOnScreenFromWorldLineSegment(imageData, SCR_WIDTH, simpleWorldLineSegment, perspectiveProjectionMatrix, lineThickness, blue);
+        //DrawMeshOnScreenFromWorldWithTransform(imageData, SCR_WIDTH, SCR_HEIGHT, simpleTriangle, modelMat, cameraPosition, perspectiveProjectionMatrix, lineThickness, red);
+        DrawMeshOnScreenFromWorldWithTransform(imageData, SCR_WIDTH, SCR_HEIGHT, cubeMesh, modelMat, cameraPosition, perspectiveProjectionMatrix, lineThickness, red);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
