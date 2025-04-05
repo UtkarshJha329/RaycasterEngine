@@ -9,6 +9,10 @@ int GetRedFlattenedImageDataSlotForPixel(Vector2Int pixelPos, int imageWidth) {
     return (pixelPos.x + pixelPos.y * imageWidth) * 4;
 }
 
+int GetFlattenedImageDataSlotForDepthData(Vector2Int pixelPos, int imageWidth) {
+    return (pixelPos.x + pixelPos.y * imageWidth);
+}
+
 void FillSubPixels(std::vector<unsigned char>& imageData, int imageWidth, Vector2Int pixelCentre, int halfSizeMinusOne, Colour colourToFillWith) {
     for (int x = -halfSizeMinusOne; x < halfSizeMinusOne; x++)
     {
@@ -93,7 +97,7 @@ bool IsTopOrLeft(Vector2Int start, Vector2Int end) {
     return isTopEdge || isLeftEdge;
 }
 
-void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle worldTriangle, Vector3 triangleNormal, Mat4x4& projectionMatrix, int lineThickness, Colour triangleColour) {
+void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Triangle worldTriangle, Vector3 triangleNormal, Mat4x4& projectionMatrix, int lineThickness, Colour triangleColour) {
 
     worldTriangle.a.position.y *= -1.0f;
     worldTriangle.b.position.y *= -1.0f;
@@ -106,6 +110,10 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     projectedPointA = projectedPointA / projectedPointA.w;
     projectedPointB = projectedPointB / projectedPointB.w;
     projectedPointC = projectedPointC / projectedPointC.w;
+
+    float depthA = projectedPointA.z;
+    float depthB = projectedPointB.z;
+    float depthC = projectedPointC.z;
 
     projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
     projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
@@ -138,6 +146,10 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     Vector2 bFloat = projectedPointC - projectedPointB;
     Vector2 cFloat = projectedPointA - projectedPointC;
 
+    //float areaOfTriangle = (aFloat.x * cFloat.y - cFloat.x * aFloat.y);
+    float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y);
+    //std::cout << areaOfTriangle << std::endl;
+
     Vector3 lightDir = Vector3{ -1.0f, 1.0f, -1.0f };
     lightDir = glm::normalize(lightDir);
     float normDotLightDirMax = glm::max(glm::dot(triangleNormal, lightDir), 0.0f);
@@ -157,6 +169,9 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
     float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
 
+    //Vector2Int triangleCentre = (projectedPointA + projectedPointB + projectedPointC) / 3.0f;
+    //int depthIndex = GetFlattenedImageDataSlotForDepthData(triangleCentre, imageWidth);
+
     for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
     //for (int y = boundingBoxMinFloat.y; y <= boundingBoxMaxFloat.y; y++)
     {
@@ -164,9 +179,9 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
         //for (int x = boundingBoxMinFloat.x; x <= boundingBoxMaxFloat.x; x++)
         {
             Vector2Int curPoint = Vector2Int{ x, y };
-            Vector2Int ap = curPoint - Vector2Int(projectedPointA);
-            Vector2Int bp = curPoint - Vector2Int(projectedPointB);
-            Vector2Int cp = curPoint - Vector2Int(projectedPointC);
+            //Vector2Int ap = curPoint - Vector2Int(projectedPointA);
+            //Vector2Int bp = curPoint - Vector2Int(projectedPointB);
+            //Vector2Int cp = curPoint - Vector2Int(projectedPointC);
 
             Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
             Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
@@ -181,20 +196,31 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
             float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1Float;
             float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2Float;
 
-            //float cutOffValue = -80.0f;
-            float cutOffValueFloat = 0.0f;
-            //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
-            if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat) {
+            float alpha = crossAFloat / areaOfTriangle;
+            float beta  = crossBFloat / areaOfTriangle;
+            float gamma = crossCFloat / areaOfTriangle;
 
-                int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
-                if (index >= 0 && (index + 3) < imageData.size()) {
+            float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+            int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-                    imageData[index + 0] = modifiedColour.r;
-                    imageData[index + 1] = modifiedColour.g;
-                    imageData[index + 2] = modifiedColour.b;
-                    imageData[index + 3] = modifiedColour.a;
+            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+            {
+                //float cutOffValue = -80.0f;
+                float cutOffValueFloat = 0.0f;
+                //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
+                if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+                {
+                    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+                    if (index >= 0 && (index + 3) < imageData.size())
+                    {
+                        imageData[index + 0] = modifiedColour.r;
+                        imageData[index + 1] = modifiedColour.g;
+                        imageData[index + 2] = modifiedColour.b;
+                        imageData[index + 3] = modifiedColour.a;
+                    }
+
+                    imageDepthData[depthDataIndex] = depth;
                 }
-
             }
         }
     }
@@ -216,7 +242,7 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
-void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle modelTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
+void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Triangle modelTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
 
     Triangle transformedTriangle = ApplyTransformToTriangle(modelTriangle, modelMatrix);
 
@@ -231,15 +257,15 @@ void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned cha
     trianglePosRelativeToCamera = glm::normalize(trianglePosRelativeToCamera);
 
     if (glm::dot(normal, trianglePosRelativeToCamera) < 0.0f) {
-        DrawTriangleOnScreenFromWorldTriangle(imageData, imageWidth, imageHeight, transformedTriangle, normal, projectionMatrix, lineThickness, lineColour);
+        DrawTriangleOnScreenFromWorldTriangle(imageData, imageDepthData, imageWidth, imageHeight, transformedTriangle, normal, projectionMatrix, lineThickness, lineColour);
     }
 
 }
 
-void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Mesh& currentMesh, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
+void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Mesh& currentMesh, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
 
     for (int i = 0; i < currentMesh.triangles.size(); i++)
     {
-        DrawTriangleOnScreenFromWorldTriangleWithTransform(imageData, imageWidth, imageHeight, currentMesh.triangles[i], modelMatrix, cameraPosition, projectionMatrix, lineThickness, lineColour);
+        DrawTriangleOnScreenFromWorldTriangleWithTransform(imageData, imageDepthData, imageWidth, imageHeight, currentMesh.triangles[i], modelMatrix, cameraPosition, projectionMatrix, lineThickness, lineColour);
     }
 }
