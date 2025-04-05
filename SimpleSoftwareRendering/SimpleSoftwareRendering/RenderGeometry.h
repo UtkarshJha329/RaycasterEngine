@@ -118,12 +118,22 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
     Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
 
+    Vector2 boundingBoxMinFloat = Vector2{ std::floor(std::min(projectedPointA.x, projectedPointB.x)), std::floor(std::min(projectedPointA.y, projectedPointB.y)) };
+    Vector2 boundingBoxMaxFloat = Vector2{ std::floor(std::max(projectedPointA.x, projectedPointB.x)), std::floor(std::max(projectedPointA.y, projectedPointB.y)) };
+
     boundingBoxMin = Vector2Int{ (int)std::min((float)boundingBoxMin.x, projectedPointC.x), (int)std::min((float)boundingBoxMin.y, projectedPointC.y) };
     boundingBoxMax = Vector2Int{ (int)std::max((float)boundingBoxMax.x, projectedPointC.x), (int)std::max((float)boundingBoxMax.y, projectedPointC.y) };
+
+    boundingBoxMinFloat = Vector2{ std::ceil(std::min((float)boundingBoxMin.x, projectedPointC.x)), std::ceil(std::min((float)boundingBoxMin.y, projectedPointC.y)) };
+    boundingBoxMaxFloat = Vector2{ std::ceil(std::max((float)boundingBoxMax.x, projectedPointC.x)), std::ceil(std::max((float)boundingBoxMax.y, projectedPointC.y)) };
 
     Vector2Int a = projectedPointB - projectedPointA;
     Vector2Int b = projectedPointC - projectedPointB;
     Vector2Int c = projectedPointA - projectedPointC;
+
+    Vector2 aFloat = projectedPointB - projectedPointA;
+    Vector2 bFloat = projectedPointC - projectedPointB;
+    Vector2 cFloat = projectedPointA - projectedPointC;
 
     Vector3 lightDir = Vector3{ -1.0f, 1.0f, -1.0f };
     lightDir = glm::normalize(lightDir);
@@ -148,14 +158,23 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
             Vector2Int bp = curPoint - Vector2Int(projectedPointB);
             Vector2Int cp = curPoint - Vector2Int(projectedPointC);
 
+            Vector2 curPointFloat = Vector2{ x, y };
+            Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+            Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+            Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
             float crossA = (a.x * ap.y) - (ap.x * a.y) + biasEdgeg0;
             float crossB = (b.x * bp.y) - (bp.x * b.y) + biasEdgeg1;
             float crossC = (c.x * cp.y) - (cp.x * c.y) + biasEdgeg2;
 
-            float cutOffValue = -80.0f;
-            if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
+            float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y) + biasEdgeg0;
+            float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1;
+            float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2;
 
-                //std::cout << "Filling triangle." << std::endl;
+            //float cutOffValue = -80.0f;
+            float cutOffValueFloat = -0.5f;
+            //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
+            if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat) {
 
                 int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
                 if (index >= 0 && (index + 3) < imageData.size()) {
