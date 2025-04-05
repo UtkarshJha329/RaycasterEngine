@@ -118,18 +118,21 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
     Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
 
-    Vector2 boundingBoxMinFloat = Vector2{ std::floor(std::min(projectedPointA.x, projectedPointB.x)), std::floor(std::min(projectedPointA.y, projectedPointB.y)) };
-    Vector2 boundingBoxMaxFloat = Vector2{ std::floor(std::max(projectedPointA.x, projectedPointB.x)), std::floor(std::max(projectedPointA.y, projectedPointB.y)) };
+    //Vector2 boundingBoxMinFloat = Vector2{ std::floor(std::min(projectedPointA.x, projectedPointB.x)), std::floor(std::min(projectedPointA.y, projectedPointB.y)) };
+    //Vector2 boundingBoxMaxFloat = Vector2{ std::floor(std::max(projectedPointA.x, projectedPointB.x)), std::floor(std::max(projectedPointA.y, projectedPointB.y)) };
 
     boundingBoxMin = Vector2Int{ (int)std::min((float)boundingBoxMin.x, projectedPointC.x), (int)std::min((float)boundingBoxMin.y, projectedPointC.y) };
     boundingBoxMax = Vector2Int{ (int)std::max((float)boundingBoxMax.x, projectedPointC.x), (int)std::max((float)boundingBoxMax.y, projectedPointC.y) };
 
-    boundingBoxMinFloat = Vector2{ std::ceil(std::min((float)boundingBoxMin.x, projectedPointC.x)), std::ceil(std::min((float)boundingBoxMin.y, projectedPointC.y)) };
-    boundingBoxMaxFloat = Vector2{ std::ceil(std::max((float)boundingBoxMax.x, projectedPointC.x)), std::ceil(std::max((float)boundingBoxMax.y, projectedPointC.y)) };
+    //boundingBoxMinFloat = Vector2{ std::ceil(std::min((float)boundingBoxMinFloat.x, projectedPointC.x)), std::ceil(std::min((float)boundingBoxMinFloat.y, projectedPointC.y)) };
+    //boundingBoxMaxFloat = Vector2{ std::ceil(std::max((float)boundingBoxMaxFloat.x, projectedPointC.x)), std::ceil(std::max((float)boundingBoxMaxFloat.y, projectedPointC.y)) };
 
-    Vector2Int a = projectedPointB - projectedPointA;
-    Vector2Int b = projectedPointC - projectedPointB;
-    Vector2Int c = projectedPointA - projectedPointC;
+    //boundingBoxMinFloat = Vector2{ std::ceil(std::min((float)boundingBoxMin.x, projectedPointC.x)), std::ceil(std::min((float)boundingBoxMin.y, projectedPointC.y)) };
+    //boundingBoxMaxFloat = Vector2{ std::ceil(std::max((float)boundingBoxMax.x, projectedPointC.x)), std::ceil(std::max((float)boundingBoxMax.y, projectedPointC.y)) };
+
+    //Vector2Int a = projectedPointB - projectedPointA;
+    //Vector2Int b = projectedPointC - projectedPointB;
+    //Vector2Int c = projectedPointA - projectedPointC;
 
     Vector2 aFloat = projectedPointB - projectedPointA;
     Vector2 bFloat = projectedPointC - projectedPointB;
@@ -145,34 +148,41 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     modifiedColour.b = modifiedColour.b * normDotLightDirMax;
     modifiedColour.a = modifiedColour.a;
 
-    int biasEdgeg0 = IsTopOrLeft(projectedPointB, projectedPointA) ? 0 : -1;
-    int biasEdgeg1 = IsTopOrLeft(projectedPointC, projectedPointB) ? 0 : -1;
-    int biasEdgeg2 = IsTopOrLeft(projectedPointA, projectedPointC) ? 0 : -1;
+    //int biasEdgeg0 = IsTopOrLeft(projectedPointB, projectedPointA) ? 0 : -1;
+    //int biasEdgeg1 = IsTopOrLeft(projectedPointC, projectedPointB) ? 0 : -1;
+    //int biasEdgeg2 = IsTopOrLeft(projectedPointA, projectedPointC) ? 0 : -1;
+
+    float biasEdgeValueFloat = -0.0001f;
+    float biasEdgeg0Float = IsTopOrLeft(projectedPointB, projectedPointA) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
 
     for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
+    //for (int y = boundingBoxMinFloat.y; y <= boundingBoxMaxFloat.y; y++)
     {
         for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+        //for (int x = boundingBoxMinFloat.x; x <= boundingBoxMaxFloat.x; x++)
         {
             Vector2Int curPoint = Vector2Int{ x, y };
             Vector2Int ap = curPoint - Vector2Int(projectedPointA);
             Vector2Int bp = curPoint - Vector2Int(projectedPointB);
             Vector2Int cp = curPoint - Vector2Int(projectedPointC);
 
-            Vector2 curPointFloat = Vector2{ x, y };
+            Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
             Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
             Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
             Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
 
-            float crossA = (a.x * ap.y) - (ap.x * a.y) + biasEdgeg0;
-            float crossB = (b.x * bp.y) - (bp.x * b.y) + biasEdgeg1;
-            float crossC = (c.x * cp.y) - (cp.x * c.y) + biasEdgeg2;
+            //float crossA = (a.x * ap.y) - (ap.x * a.y) + biasEdgeg0;
+            //float crossB = (b.x * bp.y) - (bp.x * b.y) + biasEdgeg1;
+            //float crossC = (c.x * cp.y) - (cp.x * c.y) + biasEdgeg2;
 
-            float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y) + biasEdgeg0;
-            float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1;
-            float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2;
+            float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y) + biasEdgeg0Float;
+            float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1Float;
+            float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2Float;
 
             //float cutOffValue = -80.0f;
-            float cutOffValueFloat = -0.5f;
+            float cutOffValueFloat = 0.0f;
             //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
             if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat) {
 
