@@ -84,7 +84,16 @@ void DrawLineSegmentOnScreenFromWorldLineSegment(std::vector<unsigned char>& ima
     DrawLineSegmentOnScreen(imageData, imageWidth, remappedPointA, remappedPointB, lineThickness, lineColour);
 }
 
-void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle worldTriangle, Mat4x4& projectionMatrix, int lineThickness, Colour triangleColour) {
+bool IsTopOrLeft(Vector2Int start, Vector2Int end) {
+    Vector2Int edge = end - start;
+
+    bool isTopEdge = edge.y == 0 && edge.x > 0;
+    bool isLeftEdge = edge.y < 0;
+
+    return isTopEdge || isLeftEdge;
+}
+
+void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle worldTriangle, Vector3 triangleNormal, Mat4x4& projectionMatrix, int lineThickness, Colour triangleColour) {
 
     worldTriangle.a.position.y *= -1.0f;
     worldTriangle.b.position.y *= -1.0f;
@@ -102,9 +111,9 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
     projectedPointC.x += 1.0f; projectedPointC.y += 1.0f;
 
-    projectedPointA.x *= 0.5 * imageWidth; projectedPointA.y *= 0.5 * imageHeight;
-    projectedPointB.x *= 0.5 * imageWidth; projectedPointB.y *= 0.5 * imageHeight;
-    projectedPointC.x *= 0.5 * imageWidth; projectedPointC.y *= 0.5 * imageHeight;
+    projectedPointA.x *= (0.5 * imageWidth); projectedPointA.y *= (0.5 * imageHeight);
+    projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
+    projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
 
     Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
     Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
@@ -116,59 +125,61 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     Vector2Int b = projectedPointC - projectedPointB;
     Vector2Int c = projectedPointA - projectedPointC;
 
+    Vector3 lightDir = Vector3{ -1.0f, 1.0f, -1.0f };
+    lightDir = glm::normalize(lightDir);
+    float normDotLightDirMax = glm::max(glm::dot(triangleNormal, lightDir), 0.0f);
+
+    Colour modifiedColour = triangleColour;
+    modifiedColour.r = modifiedColour.r * normDotLightDirMax;
+    modifiedColour.g = modifiedColour.g * normDotLightDirMax;
+    modifiedColour.b = modifiedColour.b * normDotLightDirMax;
+    modifiedColour.a = modifiedColour.a;
+
+    int biasEdgeg0 = IsTopOrLeft(projectedPointB, projectedPointA) ? 0 : -1;
+    int biasEdgeg1 = IsTopOrLeft(projectedPointC, projectedPointB) ? 0 : -1;
+    int biasEdgeg2 = IsTopOrLeft(projectedPointA, projectedPointC) ? 0 : -1;
+
     for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
     {
         for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
         {
-            //float w1 = (projectedPointA.x * (projectedPointC.y - projectedPointA.y) + ((y - projectedPointA.y) * (projectedPointC.x - projectedPointA.x)) - x * (projectedPointC.y - projectedPointA.y))
-            //    / ((projectedPointB.y - projectedPointA.y) * (projectedPointC.x - projectedPointA.x) - (projectedPointB.x - projectedPointA.x) * (projectedPointC.y - projectedPointA.y));
-
-            //float w2 = ((y - projectedPointA.y) - w1 * (projectedPointB.y - projectedPointA.y)) / (projectedPointC.y - projectedPointA.y);
-
-            //if (w1 >= 0.0f && w2 >= 0.0f && (w1 + w2) <= 1.0f) {
-
-            //    int index = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ x, y }, imageWidth);
-            //    if (index >= 0 && (index + 3) < imageData.size()) {
-
-            //        //std::cout << "Drew inside triangle." << std::endl;
-
-            //        imageData[index + 0] = triangleColour.r;
-            //        imageData[index + 1] = triangleColour.g;
-            //        imageData[index + 2] = triangleColour.b;
-            //        imageData[index + 3] = triangleColour.a;
-            //    }
-
-            //}
-
             Vector2Int curPoint = Vector2Int{ x, y };
             Vector2Int ap = curPoint - Vector2Int(projectedPointA);
             Vector2Int bp = curPoint - Vector2Int(projectedPointB);
             Vector2Int cp = curPoint - Vector2Int(projectedPointC);
 
-            float crossA = (a.x * ap.y) - (ap.x * a.y);
-            float crossB = (b.x * bp.y) - (bp.x * b.y);
-            float crossC = (c.x * cp.y) - (cp.x * c.y);
+            float crossA = (a.x * ap.y) - (ap.x * a.y) + biasEdgeg0;
+            float crossB = (b.x * bp.y) - (bp.x * b.y) + biasEdgeg1;
+            float crossC = (c.x * cp.y) - (cp.x * c.y) + biasEdgeg2;
 
-            if (crossA >= 0.0f && crossB >= 0.0f && crossC >= 0.0f) {
+            float cutOffValue = -80.0f;
+            if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
 
                 //std::cout << "Filling triangle." << std::endl;
 
                 int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
                 if (index >= 0 && (index + 3) < imageData.size()) {
 
-                    imageData[index + 0] = triangleColour.r;
-                    imageData[index + 1] = triangleColour.g;
-                    imageData[index + 2] = triangleColour.b;
-                    imageData[index + 3] = triangleColour.a;
+                    imageData[index + 0] = modifiedColour.r;
+                    imageData[index + 1] = modifiedColour.g;
+                    imageData[index + 2] = modifiedColour.b;
+                    imageData[index + 3] = modifiedColour.a;
                 }
 
             }
         }
     }
 
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
+    //int missingPixels = 2;
+
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, missingPixels, modifiedColour);
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, missingPixels, modifiedColour);
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, missingPixels, modifiedColour);
+
+
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
 
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
@@ -176,9 +187,9 @@ void DrawTriangleOnScreenFromWorldTriangle(std::vector<unsigned char>& imageData
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
-void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle worldTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
+void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, Triangle modelTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
 
-    Triangle transformedTriangle = ApplyTransformToTriangle(worldTriangle, modelMatrix);
+    Triangle transformedTriangle = ApplyTransformToTriangle(modelTriangle, modelMatrix);
 
     Vector3 normal, lineA, lineB;
     lineA = transformedTriangle.b.position - transformedTriangle.a.position;
@@ -191,7 +202,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithTransform(std::vector<unsigned cha
     trianglePosRelativeToCamera = glm::normalize(trianglePosRelativeToCamera);
 
     if (glm::dot(normal, trianglePosRelativeToCamera) < 0.0f) {
-        DrawTriangleOnScreenFromWorldTriangle(imageData, imageWidth, imageHeight, transformedTriangle, projectionMatrix, lineThickness, lineColour);
+        DrawTriangleOnScreenFromWorldTriangle(imageData, imageWidth, imageHeight, transformedTriangle, normal, projectionMatrix, lineThickness, lineColour);
     }
 
 }

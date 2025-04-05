@@ -52,6 +52,8 @@ bool pressedLeft = false;
 bool pressedUp = false;
 bool pressedDown = false;
 
+bool freezeRotation = false;
+
 const int lineThickness = 2;
 
 const unsigned int SCR_WIDTH = 800;
@@ -262,7 +264,7 @@ int main()
         }
     };
 
-    Vector3 cubePosition = { 0.0f, 0.0f, 5.0f };
+    Vector3 cubePosition = { 0.0f, -1.0f, 5.0f };
 
     Vector3 cameraPosition = { 0.0f, 0.0f, 0.0f };
 
@@ -284,15 +286,17 @@ int main()
 
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
 
-        angle += (float)deltaTime.count() * 0.1f;
-        if (angle >= 360.0f) {
-            angle -= 360.0f;
+        if (!freezeRotation) {
+            angle += (float)deltaTime.count() * 0.1f;
+            if (angle >= 360.0f) {
+                angle -= 360.0f;
+            }
         }
 
         Mat4x4 modelMat = glm::identity<Mat4x4>();
         modelMat = glm::translate(modelMat, cubePosition);
         //modelMat = glm::translate(modelMat, simpleTrianglePosition);
-        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 1.0f, 0.0f, 1.0f });
+        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 1.0f, 1.0f, 1.0f });
         //modelMat = glm::rotate(modelMat, glm::radians(90.0f), Vector3{ 1.0f, 0.0f, 1.0f });
         modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
 
@@ -336,6 +340,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     pressedLeft = pressedLeft ? (key == GLFW_KEY_LEFT && action != GLFW_RELEASE) : (key == GLFW_KEY_LEFT && action == GLFW_PRESS);
     pressedUp = pressedUp ? (key == GLFW_KEY_UP && action != GLFW_RELEASE) : (key == GLFW_KEY_UP && action == GLFW_PRESS);
     pressedDown = pressedDown ? (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) : (key == GLFW_KEY_DOWN && action == GLFW_PRESS);
+
+    freezeRotation = freezeRotation ? (key == GLFW_KEY_P && action != GLFW_RELEASE) : (key == GLFW_KEY_P && action == GLFW_PRESS);
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

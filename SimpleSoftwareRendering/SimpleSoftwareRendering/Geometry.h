@@ -69,9 +69,17 @@ public:
 
 Triangle ApplyTransformToTriangle(Triangle curTriangle, Mat4x4& transformMatrix) {
 
-	curTriangle.a.position = transformMatrix * Vector4(curTriangle.a.position, 1.0f);
-	curTriangle.b.position = transformMatrix * Vector4(curTriangle.b.position, 1.0f);
-	curTriangle.c.position = transformMatrix * Vector4(curTriangle.c.position, 1.0f);
+	Vector4 transformedPositionA = transformMatrix * Vector4(curTriangle.a.position, 1.0f);
+	Vector4 transformedPositionB = transformMatrix * Vector4(curTriangle.b.position, 1.0f);
+	Vector4 transformedPositionC = transformMatrix * Vector4(curTriangle.c.position, 1.0f);
+
+	transformedPositionA = transformedPositionA / transformedPositionA.w;
+	transformedPositionB = transformedPositionB / transformedPositionB.w;
+	transformedPositionC = transformedPositionC / transformedPositionC.w;
+
+	curTriangle.a.position = transformedPositionA;
+	curTriangle.b.position = transformedPositionB;
+	curTriangle.c.position = transformedPositionC;
 
 	Triangle transformedTriangle = curTriangle;
 
