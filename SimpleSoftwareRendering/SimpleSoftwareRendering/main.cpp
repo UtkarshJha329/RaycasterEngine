@@ -10,6 +10,7 @@
 #include "Geometry.h"
 #include "RenderGeometry.h"
 #include "MeshLoader.h"
+#include "CameraUtils.h"
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -63,6 +64,7 @@ void ClearImageDepth(std::vector<float>& imageDepthData, int width, int height, 
 std::string modelsPath = "Assets/Models/";
 std::string testCubeFileName = "TestCube.obj";
 std::string testBlenderMonkeyFileName = "Suzanne.obj";
+std::string testUtahTeaPotFileName = "UtahTeapot.obj";
 
 bool pressedRight = false;
 bool pressedLeft = false;
@@ -70,6 +72,7 @@ bool pressedUp = false;
 bool pressedDown = false;
 
 bool freezeRotation = false;
+bool pressedK = false;
 
 const int lineThickness = 2;
 
@@ -89,7 +92,8 @@ int main()
 
     Mesh randomMesh;
     //LoadMeshFromOBJFile(randomMesh, modelsPath, testCubeFileName);
-    LoadMeshFromOBJFile(randomMesh, modelsPath, testBlenderMonkeyFileName);
+    //LoadMeshFromOBJFile(randomMesh, modelsPath, testBlenderMonkeyFileName);
+    LoadMeshFromOBJFile(randomMesh, modelsPath, testUtahTeaPotFileName);
 
     Colour backgroundColour = { 255, 255, 255, 255 };
     Colour red = { 255, 0, 0, 255 };
@@ -97,7 +101,7 @@ int main()
     Colour blue = { 0, 0, 255, 255 };
     Colour playerColour = { 255, 0, 0, 255 };
 
-    Mat4x4 perspectiveProjectionMatrix = glm::perspective(glm::radians(fov * 0.5f), aspectRatio, distToNearPlane, distToFarPlane);
+    Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovLH_ZO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
     //Mat4x4 perspectiveProjectionMatrix = glm::mat4(1.0);
     //Mat4x4 calculatedPerspectiveProjectionMatrix = glm::mat4(0.0f);
     //calculatedPerspectiveProjectionMatrix[0][0] = aspectRatioR * oneOverFOV;
@@ -287,9 +291,35 @@ int main()
     //    }
     //};
 
-    Vector3 cubePosition = { 0.0f, 0.0f, 10.0f };
+    Vector3 objectPosition = { 0.0f, 0.0f, 4.0f };
 
-    Vector3 cameraPosition = { 0.0f, 0.0f, 0.0f };
+    //Vector3 cameraPosition = Vector3{ 0.0f, -8.0f, 0.0f };
+    Vector3 cameraPosition = Vector3{ 0.0f, -3.0f, 0.0f };
+    //Vector3 cameraFront = { 0.0f, 0.0f, 1.0f };
+    Vector3 cameraDirection = glm::normalize(objectPosition - cameraPosition);
+    //Vector3 cameraDirection = cameraFront;
+    //Vector3 cameraTarget = cameraPosition + cameraDirection;
+
+    Vector3 cameraTargetPosition = objectPosition;
+
+    Mat4x4 cameraViewMatrix = Mat4x4(0.0f);
+    //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
+    //SetCameraViewDirection(cameraViewMatrix, cameraPosition, cameraDirection);
+
+    //Vector3 objectPosition2 = { 0.0f, 0.0f, 10.0f };
+    //Vector3 cameraPosition2 = Vector3{ 0.0f, -8.0f, 0.0f };
+    //Vector3 cameraTargetPosition2 = objectPosition2;
+
+    //Mat4x4 cameraLookAtMat = glm::lookAtLH(cameraPosition2, cameraTargetPosition2, Vector3{ 0.0f, 1.0f, 0.0f });
+
+    //std::cout << "Calculated Camera View Matrix: " << std::endl;
+    //PrintMat4x4(cameraViewMatrix);
+
+    //std::cout << "Look at camera view matrix: " << std::endl;
+    //PrintMat4x4(cameraLookAtMat);
+
+    bool oldPressedK = false;
+    bool debugPrintProjectedPointsInMatrix = false;
 
     Vector3 rotationAxis = { 0.0f, 0.0f, 0.0f };
 
@@ -308,24 +338,58 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-        ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 0.0f);
+        ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
 
         if (!freezeRotation) {
-            angle += (float)deltaTime.count() * 0.1f;
-            if (angle >= 360.0f) {
-                angle -= 360.0f;
+            angle -= (float)deltaTime.count() * 0.1f;
+            if (angle <= 0.0f) {
+                angle += 360.0f;
             }
         }
 
         Mat4x4 modelMat = glm::identity<Mat4x4>();
-        modelMat = glm::translate(modelMat, cubePosition);
-        //modelMat = glm::translate(modelMat, simpleTrianglePosition);
+        modelMat = glm::translate(modelMat, objectPosition);
         modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
-        //modelMat = glm::rotate(modelMat, glm::radians(90.0f), Vector3{ 1.0f, 0.0f, 1.0f });
         modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
 
-        //DrawMeshOnScreenFromWorldWithTransform(imageData, SCR_WIDTH, SCR_HEIGHT, simpleTriangle, modelMat, cameraPosition, perspectiveProjectionMatrix, lineThickness, red);
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, perspectiveProjectionMatrix, lineThickness, red);
+        //cameraViewMatrix = glm::lookAt(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
+        //cameraViewMatrix = glm::lookAt(cameraPosition, cameraTarget, Vector3{ 0.0f, 1.0f, 0.0f });
+
+        float movementSensitivity = 0.01f;
+        if (pressedUp) {
+            cameraPosition.z += (5.0f * deltaTime.count() * movementSensitivity);
+        }
+        if (pressedDown) {
+            cameraPosition.z -= (5.0f * deltaTime.count() * movementSensitivity);
+        }
+        if (pressedRight) {
+            cameraPosition.x += (5.0f * deltaTime.count() * movementSensitivity);
+        }
+        if (pressedLeft) {
+            cameraPosition.x -= (5.0f * deltaTime.count() * movementSensitivity);
+        }
+
+        //float radius = 7.0f;
+        //cameraPosition = Vector3{ (glm::sin(glm::radians(angle)) * radius) + radius, cameraPosition.y, (glm::cos(glm::radians(angle)) * radius) + radius };
+
+        //cameraDirection = glm::normalize(cameraTargetPosition - cameraPosition);
+
+        //SetCameraViewDirection(cameraViewMatrix, cameraPosition, cameraDirection);
+        cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
+        //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
+        Mat4x4 projectionViewMatrix = perspectiveProjectionMatrix * cameraViewMatrix;
+
+        debugPrintProjectedPointsInMatrix = pressedK && !oldPressedK;
+        //std::cout << pressedK << ", " << oldPressedK << ", " << debugPrintProjectedPointsInMatrix << std::endl;
+        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, projectionViewMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
+
+        if (pressedK && pressedK != oldPressedK) {
+            std::cout << "Frame that k was pressed in!" << std::endl;
+            oldPressedK = pressedK;
+        }
+        else if (!pressedK) {
+            oldPressedK = false;
+        }
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
@@ -366,7 +430,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     pressedDown = pressedDown ? (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) : (key == GLFW_KEY_DOWN && action == GLFW_PRESS);
 
     freezeRotation = freezeRotation ? (key == GLFW_KEY_P && action != GLFW_RELEASE) : (key == GLFW_KEY_P && action == GLFW_PRESS);
+    //pressedK = pressedK ? (key == GLFW_KEY_K && action != GLFW_RELEASE) : (key == GLFW_KEY_K && action == GLFW_PRESS);
+    //pressedK = (key == GLFW_KEY_K && action == GLFW_PRESS);
 
+    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_K) != GLFW_REPEAT) {
+        pressedK = true;
+    }
+    else {
+        pressedK = false;
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

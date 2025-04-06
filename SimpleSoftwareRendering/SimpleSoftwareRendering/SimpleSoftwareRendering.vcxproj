@@ -137,6 +137,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CameraUtils.h" />
     <ClInclude Include="Colour.h" />
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="Instrumentor.h" />

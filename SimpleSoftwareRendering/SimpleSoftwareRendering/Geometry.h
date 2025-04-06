@@ -60,6 +60,35 @@ public:
 	Point c;
 };
 
+class HomogeneousTriangle {
+
+public:
+
+	Vector4 a;
+	Vector4 b;
+	Vector4 c;
+};
+
+
+class Plane {
+
+public:
+	Vector3 normal;
+	Point pointOnPlane;
+};
+
+bool LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& planeToCheckAgainst, Point& intersectionPoint, float intersectionDistance)
+{
+	Vector3 vectorAlongLineSegment = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
+	Vector3 vectorFromLineSegmentToPlane = planeToCheckAgainst.pointOnPlane.position - lineSegmentToCheck.a.position;
+
+	intersectionDistance = glm::dot(vectorFromLineSegmentToPlane, planeToCheckAgainst.normal) / glm::dot(vectorAlongLineSegment, planeToCheckAgainst.normal);
+
+	intersectionPoint = { lineSegmentToCheck.a.position * intersectionDistance };
+
+	return intersectionDistance >= 0 && intersectionDistance <= 1;
+}
+
 class Mesh {
 
 public:
@@ -84,4 +113,18 @@ Triangle ApplyTransformToTriangle(Triangle curTriangle, Mat4x4& transformMatrix)
 	Triangle transformedTriangle = curTriangle;
 
 	return transformedTriangle;
+}
+
+void PrintMat4x4(const Mat4x4& matrixToPrint) {
+
+	for (int x = 0; x < 4; x++)
+	{
+		for (int y = 0; y < 4; y++)
+		{
+			std::cout << matrixToPrint[x][y] << ", ";
+		}
+		std::cout << std::endl;
+	}
+
+	std::cout << std::endl;
 }

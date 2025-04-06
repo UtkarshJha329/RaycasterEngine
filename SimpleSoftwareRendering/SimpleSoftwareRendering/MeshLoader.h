@@ -27,6 +27,7 @@ void LoadMeshFromOBJFile(Mesh& meshToFill, std::string filePath, std::string fil
 
     while (std::getline(fileToReadStream, curLineText)) {
 
+        //std::cout << curLineText << std::endl;
         std::vector<std::string> tokens = SplitString(curLineText, ' ');
 
         if (tokens[0] == "v") {
