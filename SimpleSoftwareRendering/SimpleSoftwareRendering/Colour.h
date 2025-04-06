@@ -11,6 +11,7 @@ public:
     unsigned char a;
 };
 
+Colour white    = { 255, 255, 255, 255 };
 Colour red      = { 255, 0, 0, 255 };
 Colour green    = { 0, 255, 0, 255 };
 Colour blue     = { 0, 0, 255, 255 };

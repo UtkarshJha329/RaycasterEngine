@@ -4,6 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
 SimpleSoftwareRendering/SimpleSoftwareRendering/Assets/Models/
+SimpleSoftwareRendering/SimpleSoftwareRendering/results.json
+SimpleSoftwareRendering/x64/Release/results.json
 
 # User-specific files
 *.rsuser

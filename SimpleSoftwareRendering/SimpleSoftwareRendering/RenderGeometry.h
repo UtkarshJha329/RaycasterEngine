@@ -493,10 +493,116 @@ void DrawTriangleOnScreenFromNDCSpace(std::vector<unsigned char>& imageData, std
     //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
     //}
 
-    //lineThickness = 0;
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
+    lineThickness = 0;
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
+
+    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
+    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
+    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
+    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
+}
+
+void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
+                                            , Triangle& triangle, Vector3 triangleNormal, Vector3 depth
+                                            , int lineThickness)
+{
+
+    Vector3 projectedPointA = triangle.a.position;
+    Vector3 projectedPointB = triangle.b.position;
+    Vector3 projectedPointC = triangle.c.position;
+
+    float depthA = depth.z;
+    float depthB = depth.z;
+    float depthC = depth.z;
+
+    Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
+    Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
+
+    boundingBoxMin = Vector2Int{ (int)std::min((float)boundingBoxMin.x, projectedPointC.x), (int)std::min((float)boundingBoxMin.y, projectedPointC.y) };
+    boundingBoxMax = Vector2Int{ (int)std::max((float)boundingBoxMax.x, projectedPointC.x), (int)std::max((float)boundingBoxMax.y, projectedPointC.y) };
+
+    Vector2 aFloat = projectedPointB - projectedPointA;
+    Vector2 bFloat = projectedPointC - projectedPointB;
+    Vector2 cFloat = projectedPointA - projectedPointC;
+
+    float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y);
+
+    Vector3 lightDir = Vector3{ 1.0f, 1.0f, 1.0f };
+    lightDir = glm::normalize(lightDir);
+    float normDotLightDirMax = glm::max(glm::dot(triangleNormal, lightDir), 0.0f);
+
+    Colour modifiedColour = triangle.colour;
+    modifiedColour.r = modifiedColour.r * normDotLightDirMax;
+    modifiedColour.g = modifiedColour.g * normDotLightDirMax;
+    modifiedColour.b = modifiedColour.b * normDotLightDirMax;
+    modifiedColour.a = modifiedColour.a;
+
+    float biasEdgeValueFloat = -0.0001f;
+    float biasEdgeg0Float = IsTopOrLeft(projectedPointB, projectedPointA) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
+
+    for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
+    {
+        for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+        {
+            Vector2Int curPoint = Vector2Int{ x, y };
+
+            Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
+            Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+            Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+            Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
+            float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y) + biasEdgeg0Float;
+            float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1Float;
+            float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2Float;
+
+            float alpha = crossAFloat / areaOfTriangle;
+            float beta = crossBFloat / areaOfTriangle;
+            float gamma = crossCFloat / areaOfTriangle;
+
+            float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+            int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
+
+            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] > depth)
+            {
+                float cutOffValueFloat = 0.0f;
+                if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+                {
+                    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+                    if (index >= 0 && (index + 3) < imageData.size())
+                    {
+                        imageData[index + 0] = modifiedColour.r;
+                        imageData[index + 1] = modifiedColour.g;
+                        imageData[index + 2] = modifiedColour.b;
+                        imageData[index + 3] = modifiedColour.a;
+                    }
+
+                    imageDepthData[depthDataIndex] = depth;
+                }
+            }
+        }
+    }
+
+    //int missingPixels = 2;
+
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, missingPixels, modifiedColour);
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, missingPixels, modifiedColour);
+    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, missingPixels, modifiedColour);
+
+    //if (completelyCulled) {
+    //    lineThickness = 0;
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
+    //}
+
+    lineThickness = 0;
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
 
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
@@ -791,7 +897,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // represent a quad with two new triangles
 
         // Copy appearance info to new triangles
-        out_tri1.colour = yellow/*in_tri.colour*/;
+        out_tri1.colour = red/*in_tri.colour*/;
 
         out_tri2.colour = green/*in_tri.colour*/;
 
@@ -824,6 +930,11 @@ Plane planeBottom   = { {0.0f, 1.0f, 0.0f }, {{ 0.0f, -(1.0f + bias) , 0.0f }} }
 Plane planeTop      = { { 0.0f, -1.0f, 0.0f }, {{ 0.0f, 1.0f + bias, 0.0f }} };
 Plane planeLeft     = { { 1.0f, 0.0f, 0.0f }, {{ -(1.0f + bias), 0.0f, 0.0f }} };
 Plane planeRight    = { { -1.0f, 0.0f, 0.0f }, {{ 1.0f + bias, 0.0f, 0.0f } } };
+
+Plane planeBottomScreenSpace    = { {0.0f, 1.0f, 0.0f }, {{ 0.0f, 0.0f , 0.0f }} };             // SCREEN SPACE!!!!!!
+Plane planeTopScreenSpace       = { { 0.0f, -1.0f, 0.0f }, {{ 0.0f, screenHeight - 1, 0.0f }} };
+Plane planeLeftScreenSpace      = { { 1.0f, 0.0f, 0.0f }, {{ 0.0f, 0.0f, 0.0f }} };
+Plane planeRightScreenSpace     = { { -1.0f, 0.0f, 0.0f }, {{ screenWidth - 1, 0.0f, 0.0f } } };
 
 void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Triangle modelTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Vector3 cameraDirection, Mat4x4& viewMatrix, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour, bool debugDraw = false) {
 
@@ -861,12 +972,8 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
         // additional triangles. 
         int nClippedTriangles = 0;
         Triangle clipped[2];
-        Triangle curTriangle = Triangle{ {viewTransformedA}, {viewTransformedB}, {viewTransformedC }, red };
+        Triangle curTriangle = Triangle{ {viewTransformedA}, {viewTransformedB}, {viewTransformedC }, white };
         nClippedTriangles = TriangleClipAgainstPlane(planeNear, curTriangle, clipped[0], clipped[1]);
-
-        //if (nClippedTriangles > 1) {
-        //    std::cout << "clipped triangles." << std::endl;
-        //}
 
         for (int n = 0; n < nClippedTriangles; n++)
         {
@@ -879,14 +986,21 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             projectedPointB = projectedPointB / projectedPointB.w;
             projectedPointC = projectedPointC / projectedPointC.w;
 
-            Triangle curLargeNDCTriangle = { projectedPointA, projectedPointB, projectedPointC, clipped[n].colour };
+            Vector3 depth = Vector3{ projectedPointA.z, projectedPointB.z, projectedPointC.z };
 
-            //std::cout << (int)clipped[n].colour.r << ", " << (int)clipped[n].colour.g << ", " << (int)clipped[n].colour.b << std::endl;
+            projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
+            projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
+            projectedPointC.x += 1.0f; projectedPointC.y += 1.0f;
+
+            projectedPointA.x *= (0.5 * imageWidth); projectedPointA.y *= (0.5 * imageHeight);
+            projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
+            projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
+
+            Triangle curLargeScreenSpaceTriangle = { projectedPointA, projectedPointB, projectedPointC, clipped[n].colour };
 
             std::queue<Triangle> listOfTrianglesToBeCheckeddForClippingAndRendered;
 
-            Triangle initialTriangle = { projectedPointA, projectedPointB, projectedPointC, red };
-            listOfTrianglesToBeCheckeddForClippingAndRendered.push(initialTriangle);
+            listOfTrianglesToBeCheckeddForClippingAndRendered.push(curLargeScreenSpaceTriangle);
             int nNewTriangles = 1;
 
             for (int p = 0; p < 4; p++)
@@ -907,16 +1021,16 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
                     // to lie on the inside of the plane. I like how this
                     // comment is almost completely and utterly justified
                     if (p == 0) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeBottom, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeBottomScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
                     }
                     else if (p == 1) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeTop, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeTopScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
                     }
                     else if (p == 2) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeLeft, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeLeftScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
                     }
                     else if (p == 3) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeRight, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeRightScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
                     }
 
                     // Clipping may yield a variable number of triangles, so
@@ -933,15 +1047,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
                 //std::cout << "Drawing something? " << std::endl;
                 Triangle curTriangle = listOfTrianglesToBeCheckeddForClippingAndRendered.front();
                 listOfTrianglesToBeCheckeddForClippingAndRendered.pop();
-                DrawTriangleOnScreenFromNDCSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangle, normal, lineThickness);
+                DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangle, normal, depth, lineThickness);
             }
-            //DrawTriangleOnScreenFromPointsOfHomogeneousTriangle(imageData, imageDepthData, imageWidth, imageHeight, curTriangleHomogeneous, normal, lineThickness);
-            //DrawTriangleOnScreenFromNDCSpace(imageData, imageDepthData, imageWidth, imageHeight, curLargeNDCTriangle, normal, lineThickness);
         }
-
-
-
-        //DrawTriangleOnScreenFromWorldTriangle(imageData, imageDepthData, imageWidth, imageHeight, transformedTriangle, normal, projectionMatrix, lineThickness, lineColour);
     }
 }
 
