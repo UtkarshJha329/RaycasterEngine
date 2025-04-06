@@ -145,6 +145,23 @@ void DrawTriangleOnScreenFromPointsOfHomogeneousTriangle(std::vector<unsigned ch
     projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
     projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
 
+    projectedPointA.x = glm::max(projectedPointA.x, 0.0f);
+    projectedPointB.x = glm::max(projectedPointB.x, 0.0f);
+    projectedPointC.x = glm::max(projectedPointC.x, 0.0f);
+
+    projectedPointA.x = glm::min(projectedPointA.x, (float)imageWidth);
+    projectedPointB.x = glm::min(projectedPointB.x, (float)imageWidth);
+    projectedPointC.x = glm::min(projectedPointC.x, (float)imageWidth);
+
+    projectedPointA.y = glm::max(projectedPointA.y, 0.0f);
+    projectedPointB.y = glm::max(projectedPointB.y, 0.0f);
+    projectedPointC.y = glm::max(projectedPointC.y, 0.0f);
+
+    projectedPointA.y = glm::min(projectedPointA.y, (float)imageWidth);
+    projectedPointB.y = glm::min(projectedPointB.y, (float)imageWidth);
+    projectedPointC.y = glm::min(projectedPointC.y, (float)imageWidth);
+
+
     Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
     Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
 
