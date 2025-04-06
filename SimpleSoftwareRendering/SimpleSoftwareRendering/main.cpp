@@ -65,27 +65,41 @@ void ClearImageDepth(std::vector<float>& imageDepthData, int width, int height, 
 
 void UpdateKeyStates(GLFWwindow* window) {
 
-    int wKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    //---------------------------------Keyboard Input--------------------------------------
+
+    int wKeyState = glfwGetKey(window, GLFW_KEY_W);
     SetKeyBasedOnState(KEY_W, wKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
-    int sKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    int sKeyState = glfwGetKey(window, GLFW_KEY_S);
     SetKeyBasedOnState(KEY_S, sKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
-    int dKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    int dKeyState = glfwGetKey(window, GLFW_KEY_D);
     SetKeyBasedOnState(KEY_D, dKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
-    int aKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    int aKeyState = glfwGetKey(window, GLFW_KEY_A);
     SetKeyBasedOnState(KEY_A, aKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
-    int leftShiftKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    int leftShiftKeyState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
     SetKeyBasedOnState(KEY_LEFT_SHIFT, leftShiftKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
-    int leftCTRLKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    int leftCTRLKeyState = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL);
     SetKeyBasedOnState(KEY_LEFT_CTRL, leftCTRLKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
     int spaceKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
     SetKeyBasedOnState(KEY_SPACE, spaceKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
+
+    //---------------------------------------Mouse Input------------------------------------------
+
+    int mouseButtonLeftState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    SetKeyBasedOnState(MOUSE_BUTTON_LEFT, mouseButtonLeftState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int mouseButtonRightState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+    SetKeyBasedOnState(MOUSE_BUTTON_RIGHT, mouseButtonRightState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    mouseXFromPreviousFrame = mouseX;
+    mouseYFromPreviousFrame = mouseY;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
 }
 
 std::string modelsPath = "Assets/Models/";
@@ -128,7 +142,8 @@ int main()
     Colour blue = { 0, 0, 255, 255 };
     Colour playerColour = { 255, 0, 0, 255 };
 
-    Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovLH_ZO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
+    Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovRH_NO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
+    //Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovRH_ZO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
 
     std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
     std::vector<float> imageDepthData(SCR_WIDTH * SCR_HEIGHT);
@@ -150,6 +165,9 @@ int main()
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    //Any key press will flip the key state to pressed until it is checked. If key is released during this time, once it is checked it will flip back to released.
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -248,9 +266,15 @@ int main()
     Vector3 objectPosition = { 0.0f, 0.0f, 4.0f };
 
     Vector3 cameraPosition = Vector3{ 0.0f, -3.0f, 0.0f };
-    Vector3 cameraDirection = glm::normalize(objectPosition - cameraPosition);
-    Vector3 cameraTargetPosition = objectPosition + Vector3{ 0.0f, -2.0f, 0.0f };
+    Vector3 cameraForward = Vector3{ 0.0f, 0.0f, 1.0f };
+    Vector3 cameraTargetPosition = cameraPosition + cameraForward;
+    Vector3 cameraDirection = glm::normalize(cameraTargetPosition - cameraPosition);
     Mat4x4 cameraViewMatrix = Mat4x4(0.0f);
+
+    float mouseXRot = 0.0f;
+    float mouseYRot = 0.0f;
+    float cameraMoveSpeed = 10.0f;
+    float cameraRotSpeed = 1.0f;
 
     Vector3 rotationAxis = { 0.0f, 0.0f, 0.0f };
 
@@ -264,7 +288,8 @@ int main()
         UpdateKeyStates(window);
 
         auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> deltaTime = currentTime - previousTime;
+        std::chrono::duration<double, std::milli> difBetweenPreviousFrameTimeAndCurrentTime = currentTime - previousTime;
+        float deltaTime = difBetweenPreviousFrameTimeAndCurrentTime.count() / 1000.0f;
         //std::cout << deltaTime.count() << std::endl;
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -274,22 +299,53 @@ int main()
         ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
 
         if (!freezeRotation) {
-            angle -= (float)deltaTime.count() * 0.1f;
+            angle -= (float)deltaTime;
             if (angle <= 0.0f) {
                 angle += 360.0f;
             }
         }
 
-        if (GetKeyPressedInThisFrame(KEY_SPACE)) {
-            std::cout << "Space bar was pressed this frame." << std::endl;
-        }
+        if (GetKeyHeld(MOUSE_BUTTON_RIGHT)) {
 
-        if (GetKeyHeld(KEY_SPACE)) {
-            std::cout << "Space bar is being held." << std::endl;
-        }
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-        if (GetKeyReleasedInThisFrame(KEY_SPACE)) {
-            std::cout << "Space bar was released this frame." << std::endl;
+            if (GetKeyHeld(KEY_W)) {
+                cameraPosition.z += cameraMoveSpeed * deltaTime;
+            }
+            if (GetKeyHeld(KEY_S)) {
+                cameraPosition.z -= cameraMoveSpeed * deltaTime;
+            }
+
+            if (GetKeyHeld(KEY_D)) {
+                cameraPosition.x -= cameraMoveSpeed * deltaTime;
+            }
+            if (GetKeyHeld(KEY_A)) {
+                cameraPosition.x += cameraMoveSpeed * deltaTime;
+            }
+
+            if (GetKeyHeld(KEY_SPACE)) {
+                cameraPosition.y -= cameraMoveSpeed * deltaTime;
+            }
+            if (GetKeyHeld(KEY_LEFT_CTRL)) {
+                cameraPosition.y += cameraMoveSpeed * deltaTime;
+            }
+            cameraTargetPosition = cameraPosition + cameraForward;
+
+            float mouseDeltaX = mouseX - mouseXFromPreviousFrame;
+            float mouseDeltaY = mouseY - mouseYFromPreviousFrame;
+
+            mouseXRot -= cameraRotSpeed * mouseDeltaY * deltaTime;
+            mouseYRot -= cameraRotSpeed * mouseDeltaX * deltaTime;
+
+            if (glm::abs(mouseXRot) > 60.0f) {
+                mouseXRot = glm::sign(mouseXRot) * 60.0f;
+            }
+            if (glm::abs(mouseYRot) > 90.0f) {
+                mouseYRot = glm::sign(mouseYRot) * 90.0f;
+            }            
+        }
+        else {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
 
         Mat4x4 modelMat = glm::identity<Mat4x4>();
@@ -297,7 +353,16 @@ int main()
         modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
         modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
 
-        cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
+
+        Mat4x4 cameraTransformMatrix    = glm::identity<Mat4x4>();
+        cameraTransformMatrix           = glm::translate(cameraTransformMatrix, cameraPosition);
+        cameraTransformMatrix           = glm::rotate(cameraTransformMatrix, mouseXRot, Vector3{ 1.0f, 0.0f, 0.0f });
+        cameraTransformMatrix           = glm::rotate(cameraTransformMatrix, mouseYRot, Vector3{ 0.0f, 1.0f, 0.0f });
+        cameraTransformMatrix           = glm::scale(cameraTransformMatrix, { 1.0f, 1.0f, 1.0f });
+
+        cameraViewMatrix = glm::inverse(cameraTransformMatrix);
+
+        //cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
 
         DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
 

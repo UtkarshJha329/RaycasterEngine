@@ -566,7 +566,7 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
             float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
             int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] > depth)
+            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
             {
                 float cutOffValueFloat = 0.0f;
                 if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)

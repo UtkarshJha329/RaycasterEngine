@@ -3,13 +3,19 @@
 #include <vector>
 
 enum KeyCode {
-	KEY_W			= 87,
-	KEY_S			= 83,
-	KEY_D			= 68,
-	KEY_A			= 65,
-	KEY_LEFT_SHIFT	= 340,
-	KEY_LEFT_CTRL	= 341,
-	KEY_SPACE		= 32
+	
+	// Keyboard buttons.
+	KEY_W					= 87,
+	KEY_S					= 83,
+	KEY_D					= 68,
+	KEY_A					= 65,
+	KEY_LEFT_SHIFT			= 340,
+	KEY_LEFT_CTRL			= 341,
+	KEY_SPACE				= 32,
+
+	// Mouse buttons
+	MOUSE_BUTTON_LEFT		= 0,
+	MOUSE_BUTTON_RIGHT		= 1
 };
 
 enum KeyAction {
@@ -39,13 +45,22 @@ int KeyIndex(KeyCode keyCode) {
 	if (keyCode == KEY_SPACE) {
 		return 6;
 	}
+	if (keyCode == MOUSE_BUTTON_LEFT) {
+		return 7;
+	}
+	if (keyCode == MOUSE_BUTTON_RIGHT) {
+		return 8;
+	}
 }
 
-constexpr int numKeys = 6;
+constexpr int numKeys = 8;
 
 std::vector<bool> keyPressedInThisFrame(numKeys);
 std::vector<bool> keyHeld(numKeys);
 std::vector<bool> keyReleasedInThisFrame(numKeys);
+
+double mouseX, mouseXFromPreviousFrame = 0.0;
+double mouseY, mouseYFromPreviousFrame = 0.0;
 
 bool GetKeyPressedInThisFrame(KeyCode keyCode) {
 	return keyPressedInThisFrame[KeyIndex(keyCode)];
