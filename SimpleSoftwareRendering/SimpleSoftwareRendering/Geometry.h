@@ -6,6 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Colour.h"
+
 typedef glm::vec2 Vector2;
 typedef glm::vec3 Vector3;
 typedef glm::vec4 Vector4;
@@ -58,6 +60,8 @@ public:
 	Point a;
 	Point b;
 	Point c;
+
+	Colour colour;
 };
 
 class HomogeneousTriangle {
@@ -67,8 +71,9 @@ public:
 	Vector4 a;
 	Vector4 b;
 	Vector4 c;
-};
 
+	Colour colour;
+};
 
 class Plane {
 
@@ -87,6 +92,36 @@ bool LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& p
 	intersectionPoint = { lineSegmentToCheck.a.position * intersectionDistance };
 
 	return intersectionDistance >= 0 && intersectionDistance <= 1;
+}
+
+Vector3 LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& planeToCheckAgainst)
+{
+	Vector3 vectorAlongLineSegment = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
+	Vector3 vectorFromLineSegmentToPlane = planeToCheckAgainst.pointOnPlane.position - lineSegmentToCheck.a.position;
+
+	float intersectionDistance = glm::dot(vectorFromLineSegmentToPlane, planeToCheckAgainst.normal) / glm::dot(vectorAlongLineSegment, planeToCheckAgainst.normal);
+
+	Vector3 intersectionPoint = { lineSegmentToCheck.a.position * intersectionDistance };
+
+	if (intersectionDistance >= 0 && intersectionDistance <= 1) {
+		return intersectionPoint;
+	}
+	else {
+		return Vector3(0.0f);
+	}
+}
+
+Vector3 VectorIntersectPlane(const LineSegment& lineSegmentToCheck, Plane& plane)
+{
+	plane.normal = glm::normalize(plane.normal);
+
+	float plane_d = -glm::dot(plane.normal, plane.pointOnPlane.position);
+	float ad = glm::dot(lineSegmentToCheck.a.position, plane.normal);
+	float bd = glm::dot(lineSegmentToCheck.b.position, plane.normal);
+	float t = (-plane_d - ad) / (bd - ad);
+	Vector3 lineStartToEnd = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
+	Vector3 lineToIntersect = lineStartToEnd * t;
+	return lineSegmentToCheck.a.position + lineToIntersect;
 }
 
 class Mesh {

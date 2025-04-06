@@ -300,7 +300,7 @@ int main()
     //Vector3 cameraDirection = cameraFront;
     //Vector3 cameraTarget = cameraPosition + cameraDirection;
 
-    Vector3 cameraTargetPosition = objectPosition;
+    Vector3 cameraTargetPosition = objectPosition + Vector3{ 0.0f, -2.0f, 0.0f };
 
     Mat4x4 cameraViewMatrix = Mat4x4(0.0f);
     //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
@@ -377,11 +377,12 @@ int main()
         //SetCameraViewDirection(cameraViewMatrix, cameraPosition, cameraDirection);
         cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
         //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
-        Mat4x4 projectionViewMatrix = perspectiveProjectionMatrix * cameraViewMatrix;
+        //Mat4x4 projectionViewMatrix = perspectiveProjectionMatrix * cameraViewMatrix;
 
         debugPrintProjectedPointsInMatrix = pressedK && !oldPressedK;
         //std::cout << pressedK << ", " << oldPressedK << ", " << debugPrintProjectedPointsInMatrix << std::endl;
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, projectionViewMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
+        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
+        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, projectionViewMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
 
         if (pressedK && pressedK != oldPressedK) {
             std::cout << "Frame that k was pressed in!" << std::endl;
