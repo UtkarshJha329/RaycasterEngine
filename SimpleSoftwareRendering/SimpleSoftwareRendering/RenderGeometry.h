@@ -959,7 +959,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
     bool curTriangleIsVisibleFromCamera = glm::dot(normal, trianglePosRelativeToCamera) > 0.0f;
     bool cameraCouldSeeTriangle = glm::dot(trianglePosRelativeToCamera, cameraDirection) > 0.0f;
 
-    if (/*cameraCouldSeeTriangle && */curTriangleIsVisibleFromCamera)
+    if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
     {
         //Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
@@ -982,12 +982,15 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             Vector4 projectedPointB = { projectionMatrix * Vector4 {clipped[n].b.position, 1.0f} };
             Vector4 projectedPointC = { projectionMatrix * Vector4 {clipped[n].c.position, 1.0f} };
 
+            //Transform into NDC space.
             projectedPointA = projectedPointA / projectedPointA.w;
             projectedPointB = projectedPointB / projectedPointB.w;
             projectedPointC = projectedPointC / projectedPointC.w;
 
+            // Get depth for Z-Buffer
             Vector3 depth = Vector3{ projectedPointA.z, projectedPointB.z, projectedPointC.z };
 
+            //Transform into Screen Space
             projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
             projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
             projectedPointC.x += 1.0f; projectedPointC.y += 1.0f;

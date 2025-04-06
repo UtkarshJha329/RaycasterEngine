@@ -6,6 +6,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "Input.h"
+
 #include "Instrumentor.h"
 #include "Geometry.h"
 #include "RenderGeometry.h"
@@ -61,6 +63,31 @@ void ClearImageDepth(std::vector<float>& imageDepthData, int width, int height, 
     }
 }
 
+void UpdateKeyStates(GLFWwindow* window) {
+
+    int wKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_W, wKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int sKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_S, sKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int dKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_D, dKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int aKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_A, aKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int leftShiftKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_LEFT_SHIFT, leftShiftKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int leftCTRLKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_LEFT_CTRL, leftCTRLKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int spaceKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
+    SetKeyBasedOnState(KEY_SPACE, spaceKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+}
+
 std::string modelsPath = "Assets/Models/";
 std::string testCubeFileName = "TestCube.obj";
 std::string testBlenderMonkeyFileName = "Suzanne.obj";
@@ -102,14 +129,6 @@ int main()
     Colour playerColour = { 255, 0, 0, 255 };
 
     Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovLH_ZO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
-    //Mat4x4 perspectiveProjectionMatrix = glm::mat4(1.0);
-    //Mat4x4 calculatedPerspectiveProjectionMatrix = glm::mat4(0.0f);
-    //calculatedPerspectiveProjectionMatrix[0][0] = aspectRatioR * oneOverFOV;
-    //calculatedPerspectiveProjectionMatrix[1][1] = oneOverFOV;
-    //calculatedPerspectiveProjectionMatrix[2][2] = distToFarPlane / (distToFarPlane - distToNearPlane);
-    //calculatedPerspectiveProjectionMatrix[3][2] = (-distToFarPlane * distToNearPlane) / (distToFarPlane - distToNearPlane);
-    //calculatedPerspectiveProjectionMatrix[2][3] = 1.0f;
-    //calculatedPerspectiveProjectionMatrix[3][3] = 0.0f;
 
     std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
     std::vector<float> imageDepthData(SCR_WIDTH * SCR_HEIGHT);
@@ -226,100 +245,12 @@ int main()
     int curPosX = SCR_WIDTH / 2;
     int curPosY = SCR_HEIGHT / 2;
 
-    //float zCoord = 0.0f;
-    //Triangle simpleWorldTriangle = Triangle{ Point{{1.0f, 0.0f, zCoord}}, Point{{0.0f, 1.0f, zCoord}}, Point{{-1.0f, 0.0f, zCoord}} };
-    ////LineSegment simpleWorldLineSegment = LineSegment{ Point{{10.0f, 0.0f, 0.0f}}, Point{{-10.0f, 0.0f, 0.0f}} };
-
-    //Vector3 trianglePosition = { 0.0f, 0.0f, 10.0f };
-
-    //Mesh simpleTriangle =
-    //{
-    //    { 
-    //        // SOUTH
-    //        //{ Point{{0.0f, 0.0f, 0.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
-    //        //{ Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
-
-    //        //// EAST                                                      
-    //        //{ Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
-    //        //{ Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 0.0f, 1.0f}} },
-
-    //        //// NORTH                                                     
-    //        //{ Point{{1.0f, 0.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}} },
-    //        //{ Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}} },
-
-    //        //// WEST                                                      
-    //        //{ Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}} },
-    //        //{ Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
-
-    //        //// TOP                                                       
-    //        //{ Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
-    //        //{ Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
-
-    //        //// BOTTOM                                                    
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
-    //    }
-    //};
-    //Vector3 simpleTrianglePosition = { 0.0f, 0.0f, 5.0f };
-
-    //Mesh cubeMesh = 
-    //{
-    //    {
-    //        // SOUTH
-    //        { Point{{0.0f, 0.0f, 0.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
-    //        { Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
-
-    //        // EAST                                                      
-    //        { Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
-    //        { Point{{1.0f, 0.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 0.0f, 1.0f}} },
-
-    //        // NORTH                                                     
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}} },
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}} },
-
-    //        // WEST                                                      
-    //        { Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}} },
-    //        { Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
-
-    //        // TOP                                                       
-    //        { Point{{0.0f, 1.0f, 0.0f}},    Point{{0.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 1.0f}} },
-    //        { Point{{0.0f, 1.0f, 0.0f}},    Point{{1.0f, 1.0f, 1.0f}},    Point{{1.0f, 1.0f, 0.0f}} },
-
-    //        // BOTTOM                                                    
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}} },
-    //        { Point{{1.0f, 0.0f, 1.0f}},    Point{{0.0f, 0.0f, 0.0f}},    Point{{1.0f, 0.0f, 0.0f}} },
-    //    }
-    //};
-
     Vector3 objectPosition = { 0.0f, 0.0f, 4.0f };
 
-    //Vector3 cameraPosition = Vector3{ 0.0f, -8.0f, 0.0f };
     Vector3 cameraPosition = Vector3{ 0.0f, -3.0f, 0.0f };
-    //Vector3 cameraFront = { 0.0f, 0.0f, 1.0f };
     Vector3 cameraDirection = glm::normalize(objectPosition - cameraPosition);
-    //Vector3 cameraDirection = cameraFront;
-    //Vector3 cameraTarget = cameraPosition + cameraDirection;
-
     Vector3 cameraTargetPosition = objectPosition + Vector3{ 0.0f, -2.0f, 0.0f };
-
     Mat4x4 cameraViewMatrix = Mat4x4(0.0f);
-    //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
-    //SetCameraViewDirection(cameraViewMatrix, cameraPosition, cameraDirection);
-
-    //Vector3 objectPosition2 = { 0.0f, 0.0f, 10.0f };
-    //Vector3 cameraPosition2 = Vector3{ 0.0f, -8.0f, 0.0f };
-    //Vector3 cameraTargetPosition2 = objectPosition2;
-
-    //Mat4x4 cameraLookAtMat = glm::lookAtLH(cameraPosition2, cameraTargetPosition2, Vector3{ 0.0f, 1.0f, 0.0f });
-
-    //std::cout << "Calculated Camera View Matrix: " << std::endl;
-    //PrintMat4x4(cameraViewMatrix);
-
-    //std::cout << "Look at camera view matrix: " << std::endl;
-    //PrintMat4x4(cameraLookAtMat);
-
-    bool oldPressedK = false;
-    bool debugPrintProjectedPointsInMatrix = false;
 
     Vector3 rotationAxis = { 0.0f, 0.0f, 0.0f };
 
@@ -329,6 +260,8 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         PROFILE_SCOPE("GAME LOOP.");
+
+        UpdateKeyStates(window);
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> deltaTime = currentTime - previousTime;
@@ -347,50 +280,26 @@ int main()
             }
         }
 
+        if (GetKeyPressedInThisFrame(KEY_SPACE)) {
+            std::cout << "Space bar was pressed this frame." << std::endl;
+        }
+
+        if (GetKeyHeld(KEY_SPACE)) {
+            std::cout << "Space bar is being held." << std::endl;
+        }
+
+        if (GetKeyReleasedInThisFrame(KEY_SPACE)) {
+            std::cout << "Space bar was released this frame." << std::endl;
+        }
+
         Mat4x4 modelMat = glm::identity<Mat4x4>();
         modelMat = glm::translate(modelMat, objectPosition);
         modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
         modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
 
-        //cameraViewMatrix = glm::lookAt(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
-        //cameraViewMatrix = glm::lookAt(cameraPosition, cameraTarget, Vector3{ 0.0f, 1.0f, 0.0f });
-
-        float movementSensitivity = 0.01f;
-        if (pressedUp) {
-            cameraPosition.z += (5.0f * deltaTime.count() * movementSensitivity);
-        }
-        if (pressedDown) {
-            cameraPosition.z -= (5.0f * deltaTime.count() * movementSensitivity);
-        }
-        if (pressedRight) {
-            cameraPosition.x += (5.0f * deltaTime.count() * movementSensitivity);
-        }
-        if (pressedLeft) {
-            cameraPosition.x -= (5.0f * deltaTime.count() * movementSensitivity);
-        }
-
-        //float radius = 7.0f;
-        //cameraPosition = Vector3{ (glm::sin(glm::radians(angle)) * radius) + radius, cameraPosition.y, (glm::cos(glm::radians(angle)) * radius) + radius };
-
-        //cameraDirection = glm::normalize(cameraTargetPosition - cameraPosition);
-
-        //SetCameraViewDirection(cameraViewMatrix, cameraPosition, cameraDirection);
         cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
-        //SetCameraViewTarget(cameraViewMatrix, cameraPosition, cameraTargetPosition);
-        //Mat4x4 projectionViewMatrix = perspectiveProjectionMatrix * cameraViewMatrix;
 
-        debugPrintProjectedPointsInMatrix = pressedK && !oldPressedK;
-        //std::cout << pressedK << ", " << oldPressedK << ", " << debugPrintProjectedPointsInMatrix << std::endl;
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
-        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, projectionViewMatrix, lineThickness, red, debugPrintProjectedPointsInMatrix);
-
-        if (pressedK && pressedK != oldPressedK) {
-            std::cout << "Frame that k was pressed in!" << std::endl;
-            oldPressedK = pressedK;
-        }
-        else if (!pressedK) {
-            oldPressedK = false;
-        }
+        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
@@ -405,6 +314,7 @@ int main()
 
         frame++;
         previousTime = currentTime;
+        ResetKeysReleased();
     }
 
     glDeleteVertexArrays(1, &VAO);
@@ -424,22 +334,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
-    pressedRight = pressedRight ? (key == GLFW_KEY_RIGHT && action != GLFW_RELEASE) : (key == GLFW_KEY_RIGHT && action == GLFW_PRESS);
-    pressedLeft = pressedLeft ? (key == GLFW_KEY_LEFT && action != GLFW_RELEASE) : (key == GLFW_KEY_LEFT && action == GLFW_PRESS);
-    pressedUp = pressedUp ? (key == GLFW_KEY_UP && action != GLFW_RELEASE) : (key == GLFW_KEY_UP && action == GLFW_PRESS);
-    pressedDown = pressedDown ? (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) : (key == GLFW_KEY_DOWN && action == GLFW_PRESS);
-
-    freezeRotation = freezeRotation ? (key == GLFW_KEY_P && action != GLFW_RELEASE) : (key == GLFW_KEY_P && action == GLFW_PRESS);
-    //pressedK = pressedK ? (key == GLFW_KEY_K && action != GLFW_RELEASE) : (key == GLFW_KEY_K && action == GLFW_PRESS);
-    //pressedK = (key == GLFW_KEY_K && action == GLFW_PRESS);
-
-    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_K) != GLFW_REPEAT) {
-        pressedK = true;
-    }
-    else {
-        pressedK = false;
-    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -450,34 +344,3 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
-
-/*
-        if (frame % 10 == 0) {
-
-            int oldPixelLocation = (curPosX + (curPosY * SCR_WIDTH)) * NUM_COMPONENTS_IN_PIXEL;
-            FillSubPixels(imageData, curPosX, curPosY, 50, backgroundColour);
-
-            if (pressedRight) {
-                //std::cout << " Moved right." << curPosX << std::endl;
-                curPosX++;
-            }
-            if (pressedLeft) {
-                //std::cout << " Moved left." << curPosX << std::endl;
-                curPosX--;
-            }
-            if (pressedUp) {
-                //std::cout << " Moved up." << curPosY << std::endl;
-                curPosY++;
-            }
-            if (pressedDown) {
-                //std::cout << " Moved down." << curPosY << std::endl;
-                curPosY--;
-            }
-
-            int curPixelLocation = (curPosX + (curPosY * SCR_WIDTH)) * NUM_COMPONENTS_IN_PIXEL;
-            FillSubPixels(imageData, curPosX, curPosY, 50, playerColour);
-
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
-            glGenerateMipmap(GL_TEXTURE_2D);
-        }
-*/
