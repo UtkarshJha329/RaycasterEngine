@@ -285,55 +285,6 @@ void DrawTriangleOnScreenFromPointsOfHomogeneousTriangle(std::vector<unsigned ch
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
-bool ClipCullTriangle(const Vector4& projectedPointA, const Vector4& projectedPointB, const Vector4& projectedPointC)
-{
-    // cull tests
-    if (projectedPointA.x > projectedPointA.w &&
-        projectedPointB.x > projectedPointC.w &&
-        projectedPointC.x > projectedPointC.w)
-    {
-        //std::cout << "Culled when +x = " << projectedPointA.x << ", " << projectedPointB.x << ", " << projectedPointC.x << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-    if (projectedPointA.x < -projectedPointA.w &&
-        projectedPointB.x < -projectedPointB.w &&
-        projectedPointC.x < -projectedPointC.w)
-    {
-        //std::cout << "Culled when -x = " << projectedPointA.x << ", " << projectedPointB.x << ", " << projectedPointC.x << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-    if (projectedPointA.y > projectedPointA.w &&
-        projectedPointB.y > projectedPointB.w &&
-        projectedPointC.y > projectedPointC.w)
-    {
-        //std::cout << "Culled when +y = " << projectedPointA.y << ", " << projectedPointB.y << ", " << projectedPointC.y << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-    if (projectedPointA.y < -projectedPointA.w &&
-        projectedPointB.y < -projectedPointB.w &&
-        projectedPointC.y < -projectedPointC.w)
-    {
-        //std::cout << "Culled when -y = " << projectedPointA.y << ", " << projectedPointB.y << ", " << projectedPointC.y << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-    if (projectedPointA.z > projectedPointA.w &&
-        projectedPointB.z > projectedPointB.w &&
-        projectedPointC.z > projectedPointC.w)
-    {
-        //std::cout << "Culled when +z = " << projectedPointA.z << ", " << projectedPointB.z << ", " << projectedPointC.z << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-    if (projectedPointA.z < 0.0f &&
-        projectedPointB.z < 0.0f &&
-        projectedPointC.z < 0.0f)
-    {
-        //std::cout << "Culled when -z = " << projectedPointA.z << ", " << projectedPointB.z << ", " << projectedPointC.z << ", w := " << projectedPointA.w << ", " << projectedPointB.w << ", " << projectedPointC.w << std::endl;
-        return true;
-    }
-
-    return false;
-}
-
 void DrawTriangleOnScreenFromNDCSpace(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
                                             , Triangle& triangle, Vector3 triangleNormal
                                             , int lineThickness)
@@ -539,7 +490,7 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     modifiedColour.b = modifiedColour.b * normDotLightDirMax;
     modifiedColour.a = modifiedColour.a;
 
-    float biasEdgeValueFloat = -0.0001f;
+    float biasEdgeValueFloat = -0.00001f;
     float biasEdgeg0Float = IsTopOrLeft(projectedPointB, projectedPointA) ? 0.0f : biasEdgeValueFloat;
     float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
     float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
@@ -569,7 +520,8 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
             if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
             {
                 float cutOffValueFloat = 0.0f;
-                if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+                if ((crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+                  || crossAFloat <= cutOffValueFloat && crossBFloat <= cutOffValueFloat && crossCFloat <= cutOffValueFloat)
                 {
                     int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
                     if (index >= 0 && (index + 3) < imageData.size())
@@ -599,10 +551,21 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
     //}
 
-    lineThickness = 0;
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
-    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
+    //if (drawnNothingAfterPassingDepthTest) {
+    //    lineThickness = 0;
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, black);
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, black);
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, black);
+
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, black);
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, black);
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, lineThickness, black);
+    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, black);
+
+    //    if (!EnsureTriangleVerticesAreInClockwiseOrder(triangle)) {
+    //        std::cout << "The not drawn triangle was not in the correct order!" << std::endl;
+    //    }
+    //}
 
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
@@ -732,19 +695,19 @@ void DrawTriangleOnScreenFromProjectedTriangle(std::vector<unsigned char>& image
                 //float cutOffValue = -80.0f;
                 float cutOffValueFloat = 0.0f;
                 //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
-                if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
-                {
-                    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
-                    if (index >= 0 && (index + 3) < imageData.size())
-                    {
-                        imageData[index + 0] = modifiedColour.r;
-                        imageData[index + 1] = modifiedColour.g;
-                        imageData[index + 2] = modifiedColour.b;
-                        imageData[index + 3] = modifiedColour.a;
-                    }
+if (crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+{
+    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+    if (index >= 0 && (index + 3) < imageData.size())
+    {
+        imageData[index + 0] = modifiedColour.r;
+        imageData[index + 1] = modifiedColour.g;
+        imageData[index + 2] = modifiedColour.b;
+        imageData[index + 3] = modifiedColour.a;
+    }
 
-                    imageDepthData[depthDataIndex] = depth;
-                }
+    imageDepthData[depthDataIndex] = depth;
+}
             }
         }
     }
@@ -821,7 +784,7 @@ void DrawWireFrameHomogeneousTriangle(std::vector<unsigned char>& imageData, std
     DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
-int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1, Triangle& out_tri2)
+int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1, Triangle& out_tri2, bool test = false)
 {
     // Make sure plane normal is indeed normal
     plane.normal = glm::normalize(plane.normal);
@@ -859,20 +822,39 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // All points lie on the outside of plane, so clip whole triangle
         // It ceases to exist
 
-        return 0; // No returned triangles are valid
+        // Test
+        if (test) {
+            out_tri1 = in_tri;
+            out_tri1.colour = pink;
+
+            return 1; // Test.
+        }
+        else {
+            return 0; // No returned triangles are valid
+        }
     }
 
     if (nInsidePointCount == 3)
     {
         // All points lie on the inside of plane, so do nothing
         // and allow the triangle to simply pass through
-        out_tri1 = in_tri;
+        if(test)
+        {
+            return 0; // Test
+        }
+        else {
 
-        return 1; // Just the one returned original triangle is valid
+            out_tri1 = in_tri;
+
+            return 1; // Just the one returned original triangle is valid
+        }
     }
 
     if (nInsidePointCount == 1 && nOutsidePointCount == 2)
     {
+        if (test) {
+            return 0;
+        }
         // Triangle should be clipped. As two points lie outside
         // the plane, the triangle simply becomes a smaller triangle
 
@@ -892,6 +874,9 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
 
     if (nInsidePointCount == 2 && nOutsidePointCount == 1)
     {
+        if (test) {
+            return 0;
+        }
         // Triangle should be clipped. As two points lie inside the plane,
         // the clipped triangle becomes a "quad". Fortunately, we can
         // represent a quad with two new triangles
@@ -911,6 +896,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // The second triangle is composed of one of he inside points, a
         // new point determined by the intersection of the other side of the 
         // triangle and the plane, and the newly created point above
+
         out_tri2.a = *inside_points[1];
         out_tri2.b.position = VectorIntersectPlane({ *inside_points[1], *outside_points[0] }, plane);
         out_tri2.c = out_tri1.c;
@@ -919,7 +905,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
     }
 }
 
-const float nearPlaneDistance = 0.1f;
+const float nearPlaneDistance = 2.1f;
 const float screenWidth = 800.0f;
 const float screenHeight = 600.0f;
 
@@ -1006,6 +992,8 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             listOfTrianglesToBeCheckeddForClippingAndRendered.push(curLargeScreenSpaceTriangle);
             int nNewTriangles = 1;
 
+            bool drawOnlyClipped = false;
+
             for (int p = 0; p < 4; p++)
             {
                 int nTrisToAdd = 0;
@@ -1024,16 +1012,16 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
                     // to lie on the inside of the plane. I like how this
                     // comment is almost completely and utterly justified
                     if (p == 0) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeBottomScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeBottomScreenSpace, triangleToTest, clippedSub[0], clippedSub[1], drawOnlyClipped);
                     }
                     else if (p == 1) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeTopScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeTopScreenSpace, triangleToTest, clippedSub[0], clippedSub[1], drawOnlyClipped);
                     }
                     else if (p == 2) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeLeftScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeLeftScreenSpace, triangleToTest, clippedSub[0], clippedSub[1], drawOnlyClipped);
                     }
                     else if (p == 3) {
-                        nTrisToAdd = TriangleClipAgainstPlane(planeRightScreenSpace, triangleToTest, clippedSub[0], clippedSub[1]);
+                        nTrisToAdd = TriangleClipAgainstPlane(planeRightScreenSpace, triangleToTest, clippedSub[0], clippedSub[1], drawOnlyClipped);
                     }
 
                     // Clipping may yield a variable number of triangles, so
@@ -1054,6 +1042,37 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             }
         }
     }
+    //else {
+    //    // Transform into view space.
+    //    Vector4 viewTransformedA = { viewMatrix * Vector4{transformedTriangle.a.position, 1.0f} };
+    //    Vector4 viewTransformedB = { viewMatrix * Vector4{transformedTriangle.b.position, 1.0f} };
+    //    Vector4 viewTransformedC = { viewMatrix * Vector4{transformedTriangle.c.position, 1.0f} };
+
+    //    //Transform into Homogeneous space
+    //    Vector4 projectedPointA = { projectionMatrix * viewTransformedA };
+    //    Vector4 projectedPointB = { projectionMatrix * viewTransformedB };
+    //    Vector4 projectedPointC = { projectionMatrix * viewTransformedC };
+
+    //    //Transform into NDC space.
+    //    projectedPointA = projectedPointA / projectedPointA.w;
+    //    projectedPointB = projectedPointB / projectedPointB.w;
+    //    projectedPointC = projectedPointC / projectedPointC.w;
+
+    //    // Get depth for Z-Buffer
+    //    Vector3 depth = Vector3{ projectedPointA.z, projectedPointB.z, projectedPointC.z };
+
+    //    //Transform into Screen Space
+    //    projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
+    //    projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
+    //    projectedPointC.x += 1.0f; projectedPointC.y += 1.0f;
+
+    //    projectedPointA.x *= (0.5 * imageWidth); projectedPointA.y *= (0.5 * imageHeight);
+    //    projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
+    //    projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
+
+    //    Triangle curTriangle = { projectedPointA, projectedPointB, projectedPointC, pink };
+    //    DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangle, normal, depth, lineThickness);
+    //}
 }
 
 void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Mesh& currentMesh, Mat4x4& modelMatrix, Vector3 cameraPosition, Vector3 cameraDirection, Mat4x4& viewMatrix, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour, bool debugDraw = false) {

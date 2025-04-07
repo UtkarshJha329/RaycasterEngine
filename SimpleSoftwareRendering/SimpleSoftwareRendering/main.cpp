@@ -315,26 +315,31 @@ int main()
 
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+            float camMoveSpeed = cameraMoveSpeed;
+
+            if (GetKeyHeld(KEY_LEFT_SHIFT)) {
+                camMoveSpeed = 0.1f;
+            }
 
             if (GetKeyHeld(KEY_W)) {
-                cameraPosition += cameraLookingDirection * cameraMoveSpeed * deltaTime;
+                cameraPosition += cameraLookingDirection * camMoveSpeed * deltaTime;
             }
             if (GetKeyHeld(KEY_S)) {
-                cameraPosition -= cameraLookingDirection * cameraMoveSpeed * deltaTime;
+                cameraPosition -= cameraLookingDirection * camMoveSpeed * deltaTime;
             }
 
             if (GetKeyHeld(KEY_D)) {
-                cameraPosition -= cameraRightDirection * cameraMoveSpeed * deltaTime;
+                cameraPosition -= cameraRightDirection * camMoveSpeed * deltaTime;
             }
             if (GetKeyHeld(KEY_A)) {
-                cameraPosition += cameraRightDirection * cameraMoveSpeed * deltaTime;
+                cameraPosition += cameraRightDirection * camMoveSpeed * deltaTime;
             }
 
             if (GetKeyHeld(KEY_SPACE)) {
-                cameraPosition.y -= cameraMoveSpeed * deltaTime;
+                cameraPosition.y -= camMoveSpeed * deltaTime;
             }
             if (GetKeyHeld(KEY_LEFT_CTRL)) {
-                cameraPosition.y += cameraMoveSpeed * deltaTime;
+                cameraPosition.y += camMoveSpeed * deltaTime;
             }
             cameraTargetPosition = cameraPosition + cameraLookingDirection;
 
