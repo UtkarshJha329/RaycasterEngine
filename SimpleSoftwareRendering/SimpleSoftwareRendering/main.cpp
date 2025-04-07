@@ -263,16 +263,22 @@ int main()
     int curPosX = SCR_WIDTH / 2;
     int curPosY = SCR_HEIGHT / 2;
 
+    Vector3 worldUP = Vector3{ 0.0f, 1.0f, 0.0f };
+    Vector3 worldForward = Vector3{ 0.0f, 0.0f, 1.0f };
+
     Vector3 objectPosition = { 0.0f, 0.0f, 4.0f };
 
     Vector3 cameraPosition = Vector3{ 0.0f, -3.0f, 0.0f };
-    Vector3 cameraForward = Vector3{ 0.0f, 0.0f, 1.0f };
-    Vector3 cameraTargetPosition = cameraPosition + cameraForward;
-    Vector3 cameraDirection = glm::normalize(cameraTargetPosition - cameraPosition);
+    Vector3 cameraTargetPosition = cameraPosition + worldForward;
+    Vector3 cameraLookingDirection = glm::normalize(cameraTargetPosition - cameraPosition);
+    Vector3 cameraRightDirection = glm::cross({ 0.0f, 1.0f, 0.0f }, cameraLookingDirection);
+    Vector3 cameraUpDirection = glm::cross(cameraLookingDirection, cameraRightDirection);
     Mat4x4 cameraViewMatrix = Mat4x4(0.0f);
 
-    float mouseXRot = 0.0f;
-    float mouseYRot = 0.0f;
+    float cameraXRot = 0.0f;
+    float cameraYRot = 0.0f;
+    float clampCameraXRot = 45.0f;
+    float clampCameraYRot = 360.0f;
     float cameraMoveSpeed = 10.0f;
     float cameraRotSpeed = 1.0f;
 
@@ -309,18 +315,19 @@ int main()
 
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+
             if (GetKeyHeld(KEY_W)) {
-                cameraPosition.z += cameraMoveSpeed * deltaTime;
+                cameraPosition += cameraLookingDirection * cameraMoveSpeed * deltaTime;
             }
             if (GetKeyHeld(KEY_S)) {
-                cameraPosition.z -= cameraMoveSpeed * deltaTime;
+                cameraPosition -= cameraLookingDirection * cameraMoveSpeed * deltaTime;
             }
 
             if (GetKeyHeld(KEY_D)) {
-                cameraPosition.x -= cameraMoveSpeed * deltaTime;
+                cameraPosition -= cameraRightDirection * cameraMoveSpeed * deltaTime;
             }
             if (GetKeyHeld(KEY_A)) {
-                cameraPosition.x += cameraMoveSpeed * deltaTime;
+                cameraPosition += cameraRightDirection * cameraMoveSpeed * deltaTime;
             }
 
             if (GetKeyHeld(KEY_SPACE)) {
@@ -329,19 +336,19 @@ int main()
             if (GetKeyHeld(KEY_LEFT_CTRL)) {
                 cameraPosition.y += cameraMoveSpeed * deltaTime;
             }
-            cameraTargetPosition = cameraPosition + cameraForward;
+            cameraTargetPosition = cameraPosition + cameraLookingDirection;
 
             float mouseDeltaX = mouseX - mouseXFromPreviousFrame;
             float mouseDeltaY = mouseY - mouseYFromPreviousFrame;
 
-            mouseXRot -= cameraRotSpeed * mouseDeltaY * deltaTime;
-            mouseYRot -= cameraRotSpeed * mouseDeltaX * deltaTime;
+            cameraXRot -= cameraRotSpeed * mouseDeltaY * deltaTime;
+            cameraYRot -= cameraRotSpeed * mouseDeltaX * deltaTime;
 
-            if (glm::abs(mouseXRot) > 60.0f) {
-                mouseXRot = glm::sign(mouseXRot) * 60.0f;
+            if (glm::abs(cameraXRot) > glm::radians(clampCameraXRot)) {
+                cameraXRot = glm::sign(cameraXRot) * glm::radians(clampCameraXRot);
             }
-            if (glm::abs(mouseYRot) > 90.0f) {
-                mouseYRot = glm::sign(mouseYRot) * 90.0f;
+            if (glm::abs(cameraYRot) >= glm::radians(clampCameraYRot)) {
+                cameraYRot = 0.0f;
             }            
         }
         else {
@@ -356,15 +363,22 @@ int main()
 
         Mat4x4 cameraTransformMatrix    = glm::identity<Mat4x4>();
         cameraTransformMatrix           = glm::translate(cameraTransformMatrix, cameraPosition);
-        cameraTransformMatrix           = glm::rotate(cameraTransformMatrix, mouseXRot, Vector3{ 1.0f, 0.0f, 0.0f });
-        cameraTransformMatrix           = glm::rotate(cameraTransformMatrix, mouseYRot, Vector3{ 0.0f, 1.0f, 0.0f });
+
+        Mat4x4 cameraRotationMatrix     = glm::identity<Mat4x4>();
+        cameraRotationMatrix            = glm::rotate(cameraRotationMatrix, cameraXRot, cameraRightDirection);
+        cameraRotationMatrix            = glm::rotate(cameraRotationMatrix, cameraYRot, worldUP);
+
+        cameraTransformMatrix           =  cameraTransformMatrix * cameraRotationMatrix;
+
         cameraTransformMatrix           = glm::scale(cameraTransformMatrix, { 1.0f, 1.0f, 1.0f });
 
         cameraViewMatrix = glm::inverse(cameraTransformMatrix);
 
-        //cameraViewMatrix = glm::lookAtLH(cameraPosition, cameraTargetPosition, Vector3{ 0.0f, -1.0f, 0.0f });
+        cameraLookingDirection = Vector3{ cameraRotationMatrix * Vector4{0.0f, 0.0f, 1.0f, 1.0f } };
+        cameraRightDirection = glm::cross({ 0.0f, 1.0f, 0.0f }, cameraLookingDirection);
 
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+
+        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
