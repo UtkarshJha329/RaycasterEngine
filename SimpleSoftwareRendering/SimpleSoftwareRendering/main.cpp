@@ -343,9 +343,13 @@ int main()
         freezeRotation = (GetKeyHeld(KEY_P));
 
         if (!freezeRotation) {
-            angle -= rotationSpeed * deltaTime;
-            if (angle <= 0.0f) {
-                angle += 360.0f;
+            //angle -= rotationSpeed * deltaTime;
+            //if (angle <= 0.0f) {
+            //    angle += 360.0f;
+            //}
+            angle += rotationSpeed * deltaTime;
+            if (angle >= 360.0f) {
+                angle = 0.0f;
             }
         }
 

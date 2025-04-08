@@ -24,6 +24,14 @@ int GetRedFlattenedImageDataSlotForPixel(Vector2Int pixelPos, int imageWidth) {
     return (pixelPos.x + pixelPos.y * imageWidth) * 4;
 }
 
+Vector4 ColourToVector4(const Colour& curColour) {
+    return Vector4{ curColour.r, curColour.g, curColour.b, curColour.a };
+}
+
+Colour Vector4ToColour(const Vector4& curColour) {
+    return Colour{ (unsigned char)curColour.x, (unsigned char)curColour.y, (unsigned char)curColour.z, (unsigned char)curColour.w, };
+}
+
 int GetFlattenedImageDataSlotForDepthData(Vector2Int pixelPos, int imageWidth) {
     return (pixelPos.x + pixelPos.y * imageWidth);
 }
@@ -661,6 +669,83 @@ void DrawTriangleOnScreenFromNDCSpace(std::vector<unsigned char>& imageData, std
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
+void DrawTrianglePixel(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, Texture* curTex,
+                        const float& x, const float& y,
+                        const Vector3& projectedPointA, const Vector3& projectedPointB, const Vector3& projectedPointC,
+                        const Vector2& aFloat, const Vector2& bFloat, const Vector2& cFloat,
+                        const float& biasEdgeg0Float, const float& biasEdgeg1Float, const float& biasEdgeg2Float,
+                        const float& areaOfTriangle,
+                        const float& depthA, const float& depthB, const float& depthC,
+                        const int& imageWidth,
+                        const float& startScanlineX, const float& endScanlineX,
+                        const Vector4& startColourForThisScanLine, const Vector4& endColourForThisScanLine,
+                        const Vector2& startTexCoordForThisScanLine, const Vector2& endTexCoordForThisScanLine,
+                        const float& colourTextureMixFactor) {
+    Vector2Int curPoint = Vector2Int{ x, y };
+    Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
+
+    Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+    Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+    Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
+    float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
+    float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
+    float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
+
+    float crossAFloatBias = crossAFloat + biasEdgeg0Float;
+    float crossBFloatBias = crossBFloat + biasEdgeg1Float;
+    float crossCFloatBias = crossCFloat + biasEdgeg2Float;
+
+    float alpha = crossAFloat / areaOfTriangle;
+    float beta = crossBFloat / areaOfTriangle;
+    float gamma = crossCFloat / areaOfTriangle;
+
+    //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
+
+    float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+    int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
+
+    if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+    {
+        {
+            int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+            if (index >= 0 && (index + 3) < imageData.size())
+            {
+                float tX = (x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f);
+
+
+                Vector4 curColour = LerpVector4(startColourForThisScanLine, endColourForThisScanLine, tX);
+                Vector2 curTexCoord = LerpVector2(startTexCoordForThisScanLine, endTexCoordForThisScanLine, tX);
+
+                //curColour = { 255, 255, 255, 255 };
+
+
+                Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
+                float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor)*curColour.r);
+                float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor)*curColour.g);
+                float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor)*curColour.b);
+
+                //r = tX * 255;
+                //g = tY2 * 255;
+                //b = 0;
+
+                //r = curTexCoord.x * 255;
+                //g = curTexCoord.y * 255;
+                //b = 0;
+
+                imageData[index + 0] = r;
+                imageData[index + 1] = g;
+                imageData[index + 2] = b;
+                imageData[index + 3] = 255;
+
+
+            }
+
+            imageDepthData[depthDataIndex] = depth;
+        }
+    }
+}
+
 int printRateCounter = 0;
 int printRate = 5000;
 std::string printString = "";
@@ -765,9 +850,6 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
     float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
 
-    float dXdYABTexCoord = (triangle.b.texCoord.x - triangle.a.texCoord.x) / (triangle.b.texCoord.y - triangle.a.texCoord.y);
-    float dXdYACTexCoord = (triangle.c.texCoord.x - triangle.a.texCoord.x) / (triangle.c.texCoord.y - triangle.a.texCoord.y);
-
 
 
     int divisionPointY = triangle.b.position.y;
@@ -775,9 +857,9 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     float x1 = triangle.b.position.x;
     float x2 = (((triangle.a.position.x - triangle.c.position.x) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.b.position.y - triangle.c.position.y)) + triangle.c.position.x;
 
-    float divisionYLerpParam = ((triangle.b.position.y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
-    Vector4 colourDivisionPoint = LerpVector4(colourC0, colourC2, divisionYLerpParam);
-    Vector2 texCoordsAtDivisionPoint = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, divisionYLerpParam);
+    //float divisionYLerpParam = ((triangle.b.position.y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
+    //Vector4 colourDivisionPoint = LerpVector4(colourC0, colourC2, divisionYLerpParam);
+    //Vector2 texCoordsAtDivisionPoint = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, divisionYLerpParam);
 
     float minX = std::min(x1, x2);
     float maxX = std::max(x1, x2);
@@ -786,14 +868,8 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     //colourC2 = (maxX == x2) ? colourC2 : colourC1;
 
     Texture* curTex = &Model::textures[currentTextureIndex];
-    //float colourTextureMixFactor = 1.0f;
-    float colourTextureMixFactor = 1.0f;
-
-    //if (printRateCounter % printRate == 0) {
-    //    std::cout << "Before drawing anything := " << std::endl;
-    //    int randIndex = printRateCounter;
-    //    PrintThisTriangleInfo(triangle, randIndex);
-    //}
+    float colourTextureMixFactor = 0.0f;
+    colourTextureMixFactor = 1.0f;
 
     int smallerTriangle = -1;
     float lengthDiffCB = (triangle.c.position.y - triangle.b.position.y);
@@ -826,89 +902,28 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
             Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
 
             Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.c.texCoord, tY2);
-            Vector2 endTexCoordForThisScanLine = LerpVector2(texCoordsAtDivisionPoint, triangle.c.texCoord, tY2);
-            
+            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);            
+
+            if (smallerTriangle == 0) {
+
+                startColourForThisScanLine = LerpVector4(colourC0, colourC1, tY2);
+                endColourForThisScanLine = LerpVector4(colourC0, colourC2, 1.0f - tY2);
+
+                startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tY2);
+                endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+            }
+
+            //int incrementX = startScanlineX < endScanlineX ? 1 : -1;
 
             //for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
             for (int x = startScanlineX; x <= endScanlineX; x++)
             {
-                Vector2Int curPoint = Vector2Int{ x, y };
-
-                Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
-                Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
-                Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
-                Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
-
-                float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
-                float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
-                float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
-
-                float crossAFloatBias = crossAFloat + biasEdgeg0Float;
-                float crossBFloatBias = crossBFloat + biasEdgeg1Float;
-                float crossCFloatBias = crossCFloat + biasEdgeg2Float;
-
-                float alpha = crossAFloat / areaOfTriangle;
-                float beta = crossBFloat / areaOfTriangle;
-                float gamma = crossCFloat / areaOfTriangle;
-
-                //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
-
-                float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
-                int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
-
-                if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
-                {
-                    {
-                        int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
-                        if (index >= 0 && (index + 3) < imageData.size())
-                        {
-                            float tX = (x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f);
-
-
-                            Vector4 curColour = LerpVector4(startColourForThisScanLine, endColourForThisScanLine, tX);
-                            Vector2 curTexCoord = LerpVector2(startTexCoordForThisScanLine, endTexCoordForThisScanLine, tX);
-
-                            //curColour = { 255, 255, 255, 255 };
-
-
-                            Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
-                            float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor) * curColour.r);
-                            float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor) * curColour.g);
-                            float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor) * curColour.b);
-
-                            //if (/*smallerTriangle == 0 || */tX < 0.0f) {
-                            //    r = 255;
-                            //    g = 255;
-                            //    b = 0;
-                            //}
-
-                            //r = tX * 255;
-                            //g = tY2 * 255;
-                            //b = 0;
-
-                            imageData[index + 0] = r;
-                            imageData[index + 1] = g;
-                            imageData[index + 2] = b;
-                            imageData[index + 3] = 255;
-
-
-                        }
-
-                        imageDepthData[depthDataIndex] = depth;
-                    }
-                }
-
+                DrawTrianglePixel(imageData, imageDepthData, curTex, x, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, depthA, depthB, depthC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
             }
             startScanlineX += appropriateSlope1;
             endScanlineX += appropriateSlope2;
         }
     }
-
-    //if (printRateCounter % printRate == 0) {
-    //    std::cout << "After drawing top triangle := " << std::endl;
-    //    int randIndex = printRateCounter;
-    //    PrintThisTriangleInfo(triangle, randIndex);
-    //}
 
     // DRAW BOTTOM TRIANGLE.
     {
@@ -927,78 +942,25 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
             float tY = ((divisionPointY - y) / ((divisionPointY - triangle.a.position.y) + 0.001f));
             float tY2 = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
 
-            Vector4 startColourForThisScanLine = LerpVector4(colourC1, colourC2, tY2);
-            Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+            Vector4 startColourForThisScanLine = LerpVector4(colourC2, colourC1, tY2);
+            Vector4 endColourForThisScanLine = LerpVector4(colourC2, colourC0, tY2);
 
-            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.a.texCoord, tY2);
-            Vector2 endTexCoordForThisScanLine = LerpVector2(texCoordsAtDivisionPoint, triangle.a.texCoord, tY2);
+            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tY2);
+            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+
+            if (smallerTriangle == 1) {
+
+                startColourForThisScanLine = LerpVector4(colourC1, colourC2, tY2);
+                endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+
+                startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.c.texCoord, tY2);
+                endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+            }
 
             //for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
             for (int x = startScanlineX; x <= endScanlineX; x++)
             {
-                Vector2Int curPoint = Vector2Int{ x, y };
-
-                Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
-                Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
-                Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
-                Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
-
-                float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
-                float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
-                float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
-
-                float crossAFloatBias = crossAFloat + biasEdgeg0Float;
-                float crossBFloatBias = crossBFloat + biasEdgeg1Float;
-                float crossCFloatBias = crossCFloat + biasEdgeg2Float;
-
-                float alpha = crossAFloat / areaOfTriangle;
-                float beta = crossBFloat / areaOfTriangle;
-                float gamma = crossCFloat / areaOfTriangle;
-
-                //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
-
-                float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
-                int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
-
-                if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
-                {
-                    {
-                        int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
-                        if (index >= 0 && (index + 3) < imageData.size())
-                        {
-                            //float tX = (x) / ((boundingBoxMax.x - boundingBoxMin.x) + 0.001f);;
-                            float tX = (x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f);
-
-                            Vector4 curColour = LerpVector4(startColourForThisScanLine, endColourForThisScanLine, tX);
-                            Vector2 curTexCoord = LerpVector2(startTexCoordForThisScanLine, endTexCoordForThisScanLine, tX);
-
-                            //curColour = { 255, 255, 255, 255 };
-
-                            Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
-                            float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor)*curColour.r);
-                            float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor)*curColour.g);
-                            float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor)*curColour.b);
-
-                            //if (/*smallerTriangle == 1 ||*/ tX < 0.0f) {
-                            //    r = 255;
-                            //    g = 255;
-                            //    b = 0;
-                            //}
-
-                            //r = tX * 255;
-                            //g = tY2 * 255;
-                            //b = 0;
-
-                            imageData[index + 0] = r;
-                            imageData[index + 1] = g;
-                            imageData[index + 2] = b;
-                            imageData[index + 3] = 255;
-                        }
-
-                        imageDepthData[depthDataIndex] = depth;
-                    }
-                }
-
+                DrawTrianglePixel(imageData, imageDepthData, curTex, x, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, depthA, depthB, depthC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
             }
             startScanlineX -= appropriateSlope1;
             endScanlineX -= appropriateSlope2;
@@ -1006,55 +968,16 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     }
 
     //if (printRateCounter % printRate == 0) {
-    //    std::cout << "After drawing bottom triangle := " << std::endl;
-    //    int randIndex = printRateCounter;
-    //    PrintThisTriangleInfo(triangle, randIndex);
-    //}
-
-    //if (printRateCounter % printRate == 0) {
     //    std::cout << printString << std::endl;
     //}
 
     //printRateCounter++;
-    //int missingPixels = 2;
-
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, missingPixels, modifiedColour);
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, missingPixels, modifiedColour);
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, missingPixels, modifiedColour);
-
-    //if (completelyCulled) {
-    //    lineThickness = 0;
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colour{ 0, 0, 255, 255 });
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
-    //}
 
     lineThickness = 1;
     DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
     DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
     DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
 
-
-    //if (drawnNothingAfterPassingDepthTest) {
-    //    lineThickness = 0;
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, black);
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, black);
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, black);
-
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, black);
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, black);
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, lineThickness, black);
-    //    DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, black);
-
-    //    if (!EnsureTriangleVerticesAreInClockwiseOrder(triangle)) {
-    //        std::cout << "The not drawn triangle was not in the correct order!" << std::endl;
-    //    }
-    //}
-
-    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
-    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMin.y, 0.0f }, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
-    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMax.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
-    //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
 void DrawTriangleOnScreenFromProjectedTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
