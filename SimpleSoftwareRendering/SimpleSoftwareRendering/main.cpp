@@ -82,6 +82,9 @@ void UpdateKeyStates(GLFWwindow* window) {
     int aKeyState = glfwGetKey(window, GLFW_KEY_A);
     SetKeyBasedOnState(KEY_A, aKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
+    int pKeyState = glfwGetKey(window, GLFW_KEY_P);
+    SetKeyBasedOnState(KEY_P, pKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
     int leftShiftKeyState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
     SetKeyBasedOnState(KEY_LEFT_SHIFT, leftShiftKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
@@ -90,7 +93,6 @@ void UpdateKeyStates(GLFWwindow* window) {
 
     int spaceKeyState = glfwGetKey(window, GLFW_KEY_SPACE);
     SetKeyBasedOnState(KEY_SPACE, spaceKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
-
 
     //---------------------------------------Mouse Input------------------------------------------
 
@@ -337,6 +339,8 @@ int main()
 
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
         ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
+
+        freezeRotation = (GetKeyHeld(KEY_P));
 
         if (!freezeRotation) {
             angle -= rotationSpeed * deltaTime;

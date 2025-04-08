@@ -12,6 +12,7 @@ enum KeyCode {
 	KEY_LEFT_SHIFT			= 340,
 	KEY_LEFT_CTRL			= 341,
 	KEY_SPACE				= 32,
+	KEY_P					= 80,
 
 	// Mouse buttons
 	MOUSE_BUTTON_LEFT		= 0,
@@ -24,32 +25,36 @@ enum KeyAction {
 };
 
 int KeyIndex(KeyCode keyCode) {
-	if (keyCode == KEY_W) {
+
+	if (keyCode == MOUSE_BUTTON_LEFT) {
 		return 0;
 	}
-	if (keyCode == KEY_S) {
+	if (keyCode == MOUSE_BUTTON_RIGHT) {
 		return 1;
 	}
-	if (keyCode == KEY_D) {
+	if (keyCode == KEY_W) {
 		return 2;
 	}
-	if (keyCode == KEY_A) {
+	if (keyCode == KEY_S) {
 		return 3;
 	}
-	if (keyCode == KEY_LEFT_SHIFT) {
+	if (keyCode == KEY_D) {
 		return 4;
 	}
-	if (keyCode == KEY_LEFT_CTRL) {
+	if (keyCode == KEY_A) {
 		return 5;
 	}
-	if (keyCode == KEY_SPACE) {
+	if (keyCode == KEY_LEFT_SHIFT) {
 		return 6;
 	}
-	if (keyCode == MOUSE_BUTTON_LEFT) {
+	if (keyCode == KEY_LEFT_CTRL) {
 		return 7;
 	}
-	if (keyCode == MOUSE_BUTTON_RIGHT) {
+	if (keyCode == KEY_SPACE) {
 		return 8;
+	}
+	if (keyCode == KEY_P) {
+		return 9;
 	}
 }
 
@@ -117,4 +122,5 @@ void ResetKeysReleased() {
 	keyReleasedInThisFrame[KeyIndex(KEY_LEFT_SHIFT)] = false;
 	keyReleasedInThisFrame[KeyIndex(KEY_LEFT_CTRL)] = false;
 	keyReleasedInThisFrame[KeyIndex(KEY_SPACE)] = false;
+	keyReleasedInThisFrame[KeyIndex(KEY_P)] = false;
 }

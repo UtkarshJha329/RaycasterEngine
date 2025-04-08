@@ -37,7 +37,7 @@ Colour GetColourFromTexCoord(Texture& texture, Vector2 texCoord) {
 
 		int r = (magnifiedTexCoord.x + magnifiedTexCoord.y * texture.width) * 4;
 
-		std::cout << "R := " << r << std::endl;
+		//std::cout << "R := " << r << std::endl;
 
 		if (r >= 0 && r + 3 < texture.data.size()) {
 			returnColour = Colour{ texture.data[r + 0], texture.data[r + 1], texture.data[r + 2], texture.data[r + 3] };

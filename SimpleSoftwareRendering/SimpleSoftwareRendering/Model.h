@@ -35,12 +35,15 @@ public:
 void PrintThisTriangleInfo(const Triangle& curTriangle, int triangleIndex) {
     std::cout << "\tCur triangle := " << triangleIndex;
     std::cout << "\n\t\t Point A Position : " << curTriangle.a.position.x << ", " << curTriangle.a.position.y << ", " << curTriangle.a.position.z;
+    std::cout << "\n\t\t Point A Colour : " << (int)curTriangle.a.colour.r << ", " << (int)curTriangle.a.colour.g << ", " << (int)curTriangle.a.colour.b;
     std::cout << "\n\t\t Point A Tex Coords : " << curTriangle.a.texCoord.x << ", " << curTriangle.a.texCoord.y;
     std::cout << std::endl;
     std::cout << "\n\t\t Point B Position : " << curTriangle.b.position.x << ", " << curTriangle.b.position.y << ", " << curTriangle.b.position.z;
+    std::cout << "\n\t\t Point B Colour : " << (int)curTriangle.b.colour.r << ", " << (int)curTriangle.b.colour.g << ", " << (int)curTriangle.b.colour.b;
     std::cout << "\n\t\t Point B Tex Coords : " << curTriangle.b.texCoord.x << ", " << curTriangle.b.texCoord.y;
     std::cout << std::endl;
     std::cout << "\n\t\t Point C Position : " << curTriangle.c.position.x << ", " << curTriangle.c.position.y << ", " << curTriangle.c.position.z;
+    std::cout << "\n\t\t Point C Colour : " << (int)curTriangle.c.colour.r << ", " << (int)curTriangle.c.colour.g << ", " << (int)curTriangle.c.colour.b;
     std::cout << "\n\t\t Point C Tex Coords : " << curTriangle.c.texCoord.x << ", " << curTriangle.c.texCoord.y;
     std::cout << std::endl;
 }
