@@ -6,6 +6,11 @@
 
 #include "Colour.h"
 #include "Geometry.h"
+#include "Model.h"
+
+float LerpFloat(const float& a, const float& b, const float& t) {
+    return a + (b - a) * t;
+}
 
 int GetRedFlattenedImageDataSlotForPixel(Vector2Int pixelPos, int imageWidth) {
     return (pixelPos.x + pixelPos.y * imageWidth) * 4;
@@ -13,6 +18,30 @@ int GetRedFlattenedImageDataSlotForPixel(Vector2Int pixelPos, int imageWidth) {
 
 int GetFlattenedImageDataSlotForDepthData(Vector2Int pixelPos, int imageWidth) {
     return (pixelPos.x + pixelPos.y * imageWidth);
+}
+
+void FillSubPixels(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, Vector2Int pixelCentre, const float& depth, int halfSizeMinusOne, Colour colourToFillWith) {
+    for (int x = -halfSizeMinusOne; x <= halfSizeMinusOne; x++)
+    {
+        for (int y = -halfSizeMinusOne; y <= halfSizeMinusOne; y++)
+        {
+            int depthIndex = GetFlattenedImageDataSlotForDepthData(Vector2Int{ pixelCentre.x + x, pixelCentre.y + y }, imageWidth);
+
+            if (true || depthIndex >= 0 && depthIndex < imageDepthData.size() && imageDepthData[depthIndex] > depth) {
+                int index = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ pixelCentre.x + x, pixelCentre.y + y }, imageWidth);
+                if (index >= 0 && (index + 3) < imageData.size()) {
+
+                    imageData[index + 0] = colourToFillWith.r;
+                    imageData[index + 1] = colourToFillWith.g;
+                    imageData[index + 2] = colourToFillWith.b;
+                    imageData[index + 3] = colourToFillWith.a;
+
+                    //imageDepthData[depthIndex] = depth;
+                }
+            }
+
+        }
+    }
 }
 
 void FillSubPixels(std::vector<unsigned char>& imageData, int imageWidth, Vector2Int pixelCentre, int halfSizeMinusOne, Colour colourToFillWith) {
@@ -32,7 +61,7 @@ void FillSubPixels(std::vector<unsigned char>& imageData, int imageWidth, Vector
     }
 }
 
-void DrawLineSegmentOnScreen(std::vector<unsigned char>& imageData, int imageWidth, Vector3Int a, Vector3Int b, int lineThickness, Colour lineColour) {
+void DrawLineSegmentOnScreen(std::vector<unsigned char>& imageData, int imageWidth, Vector2Int a, Vector2Int b, int lineThickness, Colour lineColour) {
 
     PROFILE_FUNCTION();
 
@@ -77,6 +106,175 @@ void DrawLineSegmentOnScreen(std::vector<unsigned char>& imageData, int imageWid
             FillSubPixels(imageData, imageWidth, Vector2Int{ x, y }, lineThickness, lineColour);
         }
     }
+}
+
+void DrawLineSegmentOnScreenWithDepth(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, Vector2Int a, Vector2Int b, Vector2 depthBounds, int lineThickness, Colour lineColour) {
+
+    PROFILE_FUNCTION();
+
+    //std::cout << "Drawing triangle by using scanline." << std::endl;
+
+    int x0 = a.x;
+    int y0 = a.y;
+    int x1 = b.x;
+    int y1 = b.y;
+
+    bool steep = false;
+
+    if (std::abs(x0 - x1) < std::abs(y0 - y1))
+    {
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+        steep = true;
+    }
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+
+    float dx = (float)(x1 - x0);
+    float dy = (float)(y1 - y0);
+
+    if (steep)
+    {
+        for (int x = x0; x <= x1; x++) {
+
+            float t = (x - x0) / dx;
+            int y = y0 + dy * t;
+
+            float curDepth = LerpFloat(depthBounds.x, depthBounds.y, t);
+
+            //std::cout << "Stuck here in first section." << std::endl;
+
+            FillSubPixels(imageData, imageDepthData, imageWidth, Vector2Int{ y, x }, curDepth, lineThickness, lineColour);
+        }
+    }
+    else
+    {
+        for (int x = x0; x <= x1; x++) {
+
+            float t = (x - x0) / dx;
+            int y = y0 + dy * t;
+
+            float curDepth = LerpFloat(depthBounds.x, depthBounds.y, t);
+
+            //std::cout << "Stuck here in second section." << ", dx := " << dx << ", x0 := " << x0 << ", x : = " << x << ", x1 : = " << x1 << std::endl;
+
+            FillSubPixels(imageData, imageDepthData, imageWidth, Vector2Int{ x, y }, curDepth, lineThickness, lineColour);
+        }
+    }
+}
+
+void DrawTriangleScreenSpaceScanLine(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, Triangle triangleToDraw, const Vector3& normal, const Vector3& depth, int lineThickness) {
+
+    // Set 'a' to be top vertex, followed by 'b' and then 'c'.
+    if (triangleToDraw.a.position.y > triangleToDraw.b.position.y) {
+        std::swap(triangleToDraw.a, triangleToDraw.b);
+        if (triangleToDraw.a.position.y > triangleToDraw.c.position.y) {
+            std::swap(triangleToDraw.c, triangleToDraw.a);
+        }
+    }
+    else if (triangleToDraw.a.position.y > triangleToDraw.c.position.y) {
+        std::swap(triangleToDraw.c, triangleToDraw.a);
+    }
+
+    // Set 'c' to be left vertex and 'b' to be the right vertex.
+    if (triangleToDraw.c.position.x > triangleToDraw.b.position.x) {
+        std::swap(triangleToDraw.c, triangleToDraw.b);
+    }
+
+    Vector3 lightDir = Vector3{ 1.0f, 1.0f, 1.0f };
+    lightDir = glm::normalize(lightDir);
+    float normDotLightDirMax = glm::max(glm::dot(normal, lightDir), 0.0f);
+
+    Colour modifiedColour = triangleToDraw.colour;
+    modifiedColour.r = modifiedColour.r * normDotLightDirMax;
+    modifiedColour.g = modifiedColour.g * normDotLightDirMax;
+    modifiedColour.b = modifiedColour.b * normDotLightDirMax;
+    modifiedColour.a = modifiedColour.a;
+
+
+    int ySeparatingPoint = triangleToDraw.b.position.y;
+    float cutOffDeltaDenomMargin = 0.001f;
+
+    // ---------------------- Flat bottom triangle -----------------------------
+    float deltaXAB1 = triangleToDraw.b.position.x - triangleToDraw.a.position.x;
+    float deltaXAC1 = triangleToDraw.c.position.x - triangleToDraw.a.position.x;
+
+    float deltaYAB1 = triangleToDraw.b.position.y - triangleToDraw.a.position.y;
+    float deltaYAC1 = triangleToDraw.c.position.y - triangleToDraw.a.position.y;
+
+    if (deltaYAC1 > cutOffDeltaDenomMargin && deltaYAB1 > cutOffDeltaDenomMargin) {
+
+        float deltaDepthAB1 = depth.y - depth.x;
+        float deltaDepthAC1 = depth.z - depth.x;
+
+        float deltaXByDeltaYAB1 = deltaXAB1 / deltaYAB1;
+        float deltaXByDeltaYAC1 = deltaXAC1 / deltaYAC1;
+
+        float deltaDepthByDeltaYAB1 = deltaXAB1 / deltaYAB1;
+        float deltaDepthByDeltaYAC1 = deltaXAC1 / deltaYAC1;
+
+        float curXStart = triangleToDraw.a.position.x;
+        float curXEnd = triangleToDraw.a.position.x;
+
+        float startDepth = depth.x;
+        float endDepth = depth.x;
+
+        int xSeparatingPoint = triangleToDraw.a.position.x + ((deltaYAB1 / deltaYAC1) * (triangleToDraw.c.position.x - triangleToDraw.a.position.x));
+
+        for (int scanlineY = triangleToDraw.a.position.y; scanlineY <= ySeparatingPoint; scanlineY++)
+        {
+            //std::cout << "Drawing up triangle. \n\tCur X end:= " << curXEnd
+            //    << "\n\t deltaXByDeltaYAC1 := " << deltaDepthByDeltaYAC1
+            //    << "\n\t deltaYAC1 := " << deltaYAC1 << std::endl;
+            DrawLineSegmentOnScreenWithDepth(imageData, imageDepthData, imageWidth, Vector2Int{ curXStart, scanlineY }, Vector2Int{ curXEnd, scanlineY }, Vector2{ startDepth, endDepth }, lineThickness, modifiedColour);
+
+            curXStart += deltaXByDeltaYAB1;
+            curXEnd += deltaXByDeltaYAC1;
+
+            startDepth += deltaDepthByDeltaYAB1;
+            endDepth += deltaDepthByDeltaYAC1;
+        }
+    }
+
+    // ---------------------- Flat top triangle -----------------------------
+    float deltaXAB2 = triangleToDraw.c.position.x - triangleToDraw.a.position.x;
+    float deltaXAC2 = triangleToDraw.c.position.x - triangleToDraw.b.position.x;
+
+    float deltaYAB2 = triangleToDraw.c.position.y - triangleToDraw.a.position.y;
+    float deltaYAC2 = triangleToDraw.c.position.y - triangleToDraw.b.position.y;
+
+    if (deltaYAC2 > cutOffDeltaDenomMargin && deltaYAB2 > cutOffDeltaDenomMargin) {
+
+        float deltaDepthAB2 = depth.y - depth.x;
+        float deltaDepthAC2 = depth.y - depth.z;
+
+        float deltaXByDeltaYAB2 = deltaXAB2 / deltaYAB2;
+        float deltaXByDeltaYAC2 = deltaXAC2 / deltaYAC2;
+
+        float deltaDepthByDeltaYAB2 = deltaXAB2 / deltaYAB2;
+        float deltaDepthByDeltaYAC2 = deltaXAC2 / deltaYAC2;
+
+        float curXStart = triangleToDraw.c.position.x;
+        float curXEnd = triangleToDraw.c.position.x;
+
+        float startDepth = depth.z;
+        float endDepth = depth.z;
+
+        for (int scanlineY = triangleToDraw.c.position.y; scanlineY > ySeparatingPoint; scanlineY--)
+        {
+            //std::cout << "Drawing down triangle := " << scanlineY << std::endl;
+            DrawLineSegmentOnScreenWithDepth(imageData, imageDepthData, imageWidth, Vector2Int{ curXStart, scanlineY }, Vector2Int{ curXEnd, scanlineY }, Vector2{ startDepth, endDepth }, lineThickness, modifiedColour);
+            curXStart -= deltaXByDeltaYAB2;
+            curXEnd -= deltaXByDeltaYAC2;
+
+            startDepth -= deltaDepthByDeltaYAB2;
+            endDepth -= deltaDepthByDeltaYAC2;
+
+        }
+    }
+    //std::cout << "Finished drawing triangle." << std::endl;
 }
 
 void DrawLineSegmentOnScreenFromWorldLineSegment(std::vector<unsigned char>& imageData, int imageWidth, int imageHeight, LineSegment& worldLineSegment, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour) {
@@ -455,10 +653,72 @@ void DrawTriangleOnScreenFromNDCSpace(std::vector<unsigned char>& imageData, std
     //DrawLineSegmentOnScreen(imageData, imageWidth, Vector3Int{ boundingBoxMin.x, boundingBoxMax.y, 0.0f }, Vector3Int{ boundingBoxMin.x, boundingBoxMin.y, 0.0f }, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
+int printRateCounter = 0;
+
 void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
-                                            , Triangle& triangle, Vector3 triangleNormal, Vector3 depth
+                                            , int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 depth
                                             , int lineThickness)
 {
+
+    Triangle triangle = drawTriangle;
+
+    if (triangle.a.position.y > triangle.b.position.y) {
+        //std::cout << "SORTING IS WRONG!!! A > B := " << triangle.a.position.y << ", " << triangle.b.position.y << std::endl;
+        std::swap(triangle.a, triangle.b);
+    }
+    if (triangle.a.position.y > triangle.c.position.y) {
+        //std::cout << "SORTING IS WRONG!!! A > C := " << triangle.a.position.y << ", " << triangle.c.position.y << std::endl;
+        std::swap(triangle.a, triangle.c);
+    }
+    if (triangle.b.position.y > triangle.c.position.y) {
+        //std::cout << "SORTING IS WRONG!!! B > C := " << triangle.b.position.y << ", " << triangle.c.position.y << std::endl;
+        std::swap(triangle.b, triangle.c);
+    }
+
+    if (triangle.a.position.y > triangle.b.position.y) {
+        std::cout << "SORTING IS WRONG!!! A > B := " << triangle.a.position.y << ", " << triangle.b.position.y << std::endl;
+        //std::swap(triangle.a, triangle.b);
+    }
+    if (triangle.a.position.y > triangle.c.position.y) {
+        std::cout << "SORTING IS WRONG!!! A > C := " << triangle.a.position.y << ", " << triangle.c.position.y << std::endl;
+        //std::swap(triangle.a, triangle.c);
+    }
+    if (triangle.b.position.y > triangle.c.position.y) {
+        std::cout << "SORTING IS WRONG!!! B > C := " << triangle.b.position.y << ", " << triangle.c.position.y << std::endl;
+        //std::swap(triangle.b, triangle.c);
+    }
+
+    Point sortedPointXA = triangle.a;
+    Point sortedPointXB = triangle.b;
+    Point sortedPointXC = triangle.c;
+
+    if (sortedPointXA.position.x > sortedPointXB.position.x) {
+        //std::cout << "SORTING IS WRONG!!! A > B := " << triangle.a.position.y << ", " << triangle.b.position.y << std::endl;
+        std::swap(sortedPointXA, sortedPointXB);
+    }
+    if (sortedPointXA.position.x > sortedPointXC.position.x) {
+        //std::cout << "SORTING IS WRONG!!! A > C := " << triangle.a.position.y << ", " << triangle.c.position.y << std::endl;
+        std::swap(sortedPointXA, sortedPointXC);
+    }
+    if (sortedPointXB.position.x > sortedPointXC.position.x) {
+        //std::cout << "SORTING IS WRONG!!! B > C := " << triangle.b.position.y << ", " << triangle.c.position.y << std::endl;
+        std::swap(sortedPointXB, sortedPointXC);
+    }
+
+    if (sortedPointXA.position.x > sortedPointXB.position.x) {
+        std::cout << "SORTING IS WRONG!!! Ax > Bx := " << sortedPointXA.position.x << ", " << sortedPointXB.position.x << std::endl;
+        //std::swap(triangle.a, triangle.b);
+    }
+    if (sortedPointXA.position.x > sortedPointXC.position.x) {
+        std::cout << "SORTING IS WRONG!!! Ax > Cx := " << sortedPointXA.position.x << ", " << sortedPointXC.position.x << std::endl;
+        //std::swap(triangle.a, triangle.c);
+    }
+    if (sortedPointXB.position.x > sortedPointXC.position.x) {
+        std::cout << "SORTING IS WRONG!!! Bx > Cx := " << sortedPointXB.position.x << ", " << sortedPointXC.position.x << std::endl;
+        //std::swap(triangle.b, triangle.c);
+    }
+
+
 
     Vector3 projectedPointA = triangle.a.position;
     Vector3 projectedPointB = triangle.b.position;
@@ -467,6 +727,29 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     float depthA = depth.z;
     float depthB = depth.z;
     float depthC = depth.z;
+
+    Vector2 texCoordA = triangle.a.texCoord;
+    Vector2 texCoordB = triangle.b.texCoord;
+    Vector2 texCoordC = triangle.c.texCoord;
+
+    //Vector2 texCoordA = Vector2{ 0.0f, 0.0f };
+    //Vector2 texCoordB = Vector2{ 1.0f, 0.0f };
+    //Vector2 texCoordC = Vector2{ 0.0f, 1.0f };
+
+    texCoordA = Vector2{ glm::min(glm::max(texCoordA.x, 0.0f), 1.0f), glm::min(glm::max(texCoordA.y, 0.0f), 1.0f) };
+    texCoordB = Vector2{ glm::min(glm::max(texCoordB.x, 0.0f), 1.0f), glm::min(glm::max(texCoordB.y, 0.0f), 1.0f) };
+    texCoordC = Vector2{ glm::min(glm::max(texCoordC.x, 0.0f), 1.0f), glm::min(glm::max(texCoordC.y, 0.0f), 1.0f) };
+
+    Triangle clampedTexCoordsTriangle = triangle;
+    clampedTexCoordsTriangle.a.texCoord = texCoordA;
+    clampedTexCoordsTriangle.b.texCoord = texCoordB;
+    clampedTexCoordsTriangle.c.texCoord = texCoordC;
+
+    //printRateCounter++;
+    //if (printRateCounter % 10000 == 0) {
+    //    std::cout << "Rendering Triangle Debug :=" << std::endl;
+    //    PrintThisTriangleInfo(clampedTexCoordsTriangle, curTriangleIndex);
+    //}
 
     Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
     Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
@@ -478,7 +761,7 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     Vector2 bFloat = projectedPointC - projectedPointB;
     Vector2 cFloat = projectedPointA - projectedPointC;
 
-    float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y);
+    float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y) * 0.5f;
 
     Vector3 lightDir = Vector3{ 1.0f, 1.0f, 1.0f };
     lightDir = glm::normalize(lightDir);
@@ -495,49 +778,238 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
     float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
 
-    for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
+    float dXdYABTexCoord = (triangle.b.texCoord.x - triangle.a.texCoord.x) / (triangle.b.texCoord.y - triangle.a.texCoord.y);
+    float dXdYACTexCoord = (triangle.c.texCoord.x - triangle.a.texCoord.x) / (triangle.c.texCoord.y - triangle.a.texCoord.y);
+
+    //float curTexCoordXStart = triangle.a.texCoord.x;
+    //float curTexCoordXEnd = triangle.a.texCoord.x;
+
+    //float curTexCoordYStart = triangle.a.texCoord.y;
+    //float curTexCoordYEnd = triangle.a.texCoord.y;
+
+
+    int divisionPointY = triangle.b.position.y;
+
+    // DRAW BOTTOM TRIANGLE.
     {
-        for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+        float x1 = triangle.b.position.x;
+        float x2 = (((triangle.a.position.x - triangle.c.position.x) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.b.position.y - triangle.c.position.y)) + triangle.c.position.x;
+
+        float minX = std::min(x1, x2);
+        float maxX = std::max(x1, x2);
+
+        float startScanlineX = minX;
+        float endScanlineX = maxX;
+
+        float slopeX1 = (triangle.a.position.x - triangle.b.position.x) / (triangle.a.position.y - triangle.b.position.y);
+        float slopeX2 = (triangle.a.position.x - x2) / (triangle.a.position.y - triangle.b.position.y);
+
+        float appropriateSlope1 = (minX == x1) ? slopeX1 : slopeX2;
+        float appropriateSlope2 = (maxX == x2) ? slopeX2 : slopeX1;
+
+        for (int y = divisionPointY; y >= triangle.a.position.y; y--)
         {
-            Vector2Int curPoint = Vector2Int{ x, y };
-
-            Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
-            Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
-            Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
-            Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
-
-            float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y) + biasEdgeg0Float;
-            float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y) + biasEdgeg1Float;
-            float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y) + biasEdgeg2Float;
-
-            float alpha = crossAFloat / areaOfTriangle;
-            float beta = crossBFloat / areaOfTriangle;
-            float gamma = crossCFloat / areaOfTriangle;
-
-            float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
-            int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
-
-            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+            //for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+            for (int x = startScanlineX; x <= endScanlineX; x++)
             {
-                float cutOffValueFloat = 0.0f;
-                if ((crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
-                  || crossAFloat <= cutOffValueFloat && crossBFloat <= cutOffValueFloat && crossCFloat <= cutOffValueFloat)
-                {
-                    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
-                    if (index >= 0 && (index + 3) < imageData.size())
-                    {
-                        imageData[index + 0] = modifiedColour.r;
-                        imageData[index + 1] = modifiedColour.g;
-                        imageData[index + 2] = modifiedColour.b;
-                        imageData[index + 3] = modifiedColour.a;
-                    }
+                Vector2Int curPoint = Vector2Int{ x, y };
 
-                    imageDepthData[depthDataIndex] = depth;
+                Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
+                Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+                Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+                Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
+                float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
+                float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
+                float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
+
+                float crossAFloatBias = crossAFloat + biasEdgeg0Float;
+                float crossBFloatBias = crossBFloat + biasEdgeg1Float;
+                float crossCFloatBias = crossCFloat + biasEdgeg2Float;
+
+                float alpha = crossAFloat / areaOfTriangle;
+                float beta = crossBFloat / areaOfTriangle;
+                float gamma = crossCFloat / areaOfTriangle;
+
+                //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
+
+                float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+                int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
+
+                if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+                {
+                    {
+                        int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+                        if (index >= 0 && (index + 3) < imageData.size())
+                        {
+                            float temp = 0.5f;
+                            Vector2 curTexCoord = (alpha * texCoordA * temp) + (beta * texCoordB * temp) + (gamma * texCoordC * temp);
+
+                            float lambdaAB = (y - triangle.a.position.y) / (triangle.b.position.y - triangle.a.position.y);
+                            float lambdaAC = (y - triangle.a.position.y) / (triangle.c.position.y - triangle.a.position.y);
+                            //float lambdaAB = (y - triangle.a.position.y) / (triangle.b.position.y - triangle.a.position.y);
+                            //float lambdaAC = (y - triangle.a.position.y) / (triangle.c.position.y - triangle.a.position.y);
+                            float curTexCoordXStart = LerpFloat(triangle.a.texCoord.x, triangle.b.texCoord.x, lambdaAB);
+                            float curTexCoordXEnd = LerpFloat(triangle.a.texCoord.x, triangle.c.texCoord.x, lambdaAC);;
+
+                            float curTexCoordYStart = LerpFloat(triangle.a.texCoord.y, triangle.b.texCoord.y, lambdaAB);
+                            float curTexCoordYEnd = LerpFloat(triangle.a.texCoord.y, triangle.c.texCoord.y, lambdaAC);
+
+                            //float tX = (x) / ((boundingBoxMax.x - boundingBoxMin.x) + 0.001f);;
+                            float tX = ((x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f));
+                            float texCoordX = LerpFloat(curTexCoordXStart, curTexCoordXEnd, tX);
+                            //float tY = (y) / ((boundingBoxMax.y - boundingBoxMin.y) + 0.001f);
+                            //float tY = (y - boundingBoxMin.y) / ((boundingBoxMax.y - boundingBoxMin.y) + 0.001f);
+                            float tY = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
+                            float texCoordY = LerpFloat(curTexCoordYStart, curTexCoordYEnd, tY);
+                            //float texCoordY = texCoordX;
+
+                            float r = 255 * tX;
+                            float g = 255 * tY;
+                            //float r = 255 * texCoordX;
+                            //float g = 255 * texCoordY;
+                            //float r = 255 * curTexCoord.x;
+                            //float g = 255 * curTexCoord.y;
+                            //Colour colourAtCoord = Colour{ (unsigned char)r, (unsigned char)g, 0, 255 };
+                            Texture* curTex = &Model::textures[currentTextureIndex];
+                            //Colour colourAtCoord = GetColourFromTexCoord(*curTex, Vector2{ tX, tY });
+
+                            //int textureReadIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ tX * curTex->width, tY * curTex->height }, curTex->width);
+                            int textureReadIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ tX * curTex->width, tY * curTex->height }, curTex->width);
+
+                            //imageData[index + 0] = curTex->data[textureReadIndex + 0];
+                            //imageData[index + 1] = curTex->data[textureReadIndex + 1];
+                            //imageData[index + 2] = curTex->data[textureReadIndex + 2];
+                            //imageData[index + 3] = curTex->data[textureReadIndex + 3];
+
+                            imageData[index + 0] = r;
+                            imageData[index + 1] = g;
+                            imageData[index + 2] = 0;
+                            imageData[index + 3] = 255;
+
+
+                        }
+
+                        imageDepthData[depthDataIndex] = depth;
+                    }
                 }
+
             }
+            startScanlineX -= appropriateSlope1;
+            endScanlineX -= appropriateSlope2;
         }
     }
 
+    // DRAW TOP TRIANGLE.
+    {
+        float x1 = triangle.b.position.x;
+        float x2 = (((triangle.a.position.x - triangle.c.position.x) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.b.position.y - triangle.c.position.y)) + triangle.c.position.x;
+
+        float minX = std::min(x1, x2);
+        float maxX = std::max(x1, x2);
+
+        float startScanlineX = minX;
+        float endScanlineX = maxX;
+
+        float slopeX1 = (x1 - triangle.c.position.x) / (triangle.b.position.y - triangle.c.position.y);
+        float slopeX2 = (x2 - triangle.c.position.x) / (triangle.b.position.y - triangle.c.position.y);
+
+        float appropriateSlope1 = (minX == x1) ? slopeX1 : slopeX2;
+        float appropriateSlope2 = (maxX == x2) ? slopeX2 : slopeX1;
+
+        for (int y = divisionPointY; y <= triangle.c.position.y; y++)
+        {
+            //for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+            for (int x = startScanlineX; x <= endScanlineX; x++)
+            {
+                Vector2Int curPoint = Vector2Int{ x, y };
+
+                Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
+                Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+                Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+                Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
+                float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
+                float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
+                float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
+
+                float crossAFloatBias = crossAFloat + biasEdgeg0Float;
+                float crossBFloatBias = crossBFloat + biasEdgeg1Float;
+                float crossCFloatBias = crossCFloat + biasEdgeg2Float;
+
+                float alpha = crossAFloat / areaOfTriangle;
+                float beta = crossBFloat / areaOfTriangle;
+                float gamma = crossCFloat / areaOfTriangle;
+
+                //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
+
+                float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+                int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
+
+                if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+                {
+                    {
+                        int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+                        if (index >= 0 && (index + 3) < imageData.size())
+                        {
+                            float temp = 0.5f;
+                            Vector2 curTexCoord = (alpha * texCoordA * temp) + (beta * texCoordB * temp) + (gamma * texCoordC * temp);
+
+                            float lambdaAB = (y - triangle.a.position.y) / (triangle.b.position.y - triangle.a.position.y);
+                            float lambdaAC = (y - triangle.a.position.y) / (triangle.c.position.y - triangle.a.position.y);
+                            //float lambdaAB = (y - triangle.a.position.y) / (triangle.b.position.y - triangle.a.position.y);
+                            //float lambdaAC = (y - triangle.a.position.y) / (triangle.c.position.y - triangle.a.position.y);
+                            float curTexCoordXStart = LerpFloat(triangle.a.texCoord.x, triangle.b.texCoord.x, lambdaAB);
+                            float curTexCoordXEnd = LerpFloat(triangle.a.texCoord.x, triangle.c.texCoord.x, lambdaAC);;
+
+                            float curTexCoordYStart = LerpFloat(triangle.a.texCoord.y, triangle.b.texCoord.y, lambdaAB);
+                            float curTexCoordYEnd = LerpFloat(triangle.a.texCoord.y, triangle.c.texCoord.y, lambdaAC);
+
+
+                            //float tX = (x) / ((boundingBoxMax.x - boundingBoxMin.x) + 0.001f);;
+                            float tX = (x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f);;
+                            float texCoordX = LerpFloat(curTexCoordXStart, curTexCoordXEnd, tX);
+                            //float tY = (y) / ((boundingBoxMax.y - boundingBoxMin.y) + 0.001f);
+                            //float tY = (y - boundingBoxMin.y) / ((boundingBoxMax.y - boundingBoxMin.y) + 0.001f);
+                            float tY = (y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f);
+                            float texCoordY = LerpFloat(curTexCoordYStart, curTexCoordYEnd, tY);
+                            //float texCoordY = texCoordX;
+
+                            float r = 255 * tX;
+                            float g = 255 * tY;
+                            //float r = 255 * texCoordX;
+                            //float g = 255 * texCoordY;
+                            //float r = 255 * curTexCoord.x;
+                            //float g = 255 * curTexCoord.y;
+                            //Colour colourAtCoord = Colour{ (unsigned char)r, (unsigned char)g, 0, 255 };
+                            Texture* curTex = &Model::textures[currentTextureIndex];
+                            //Colour colourAtCoord = GetColourFromTexCoord(*curTex, Vector2{ tX, tY });
+
+                            //int textureReadIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ tX * curTex->width, tY * curTex->height }, curTex->width);
+                            int textureReadIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ tX * curTex->width, tY * curTex->height }, curTex->width);
+
+                            //imageData[index + 0] = curTex->data[textureReadIndex + 0];
+                            //imageData[index + 1] = curTex->data[textureReadIndex + 1];
+                            //imageData[index + 2] = curTex->data[textureReadIndex + 2];
+                            //imageData[index + 3] = curTex->data[textureReadIndex + 3];
+
+                            imageData[index + 0] = r;
+                            imageData[index + 1] = g;
+                            imageData[index + 2] = 0;
+                            imageData[index + 3] = 255;
+
+
+                        }
+
+                        imageDepthData[depthDataIndex] = depth;
+                    }
+                }
+
+            }
+            startScanlineX += appropriateSlope1;
+            endScanlineX += appropriateSlope2;
+        }
+    }
     //int missingPixels = 2;
 
     //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, missingPixels, modifiedColour);
@@ -550,6 +1022,12 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colour{ 0, 0, 255, 255 });
     //    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
     //}
+
+    lineThickness = 1;
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
+
 
     //if (drawnNothingAfterPassingDepthTest) {
     //    lineThickness = 0;
@@ -784,6 +1262,7 @@ void DrawWireFrameHomogeneousTriangle(std::vector<unsigned char>& imageData, std
     DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colour{ 0, 0, 255, 255 });
 }
 
+//int printRateCounter = 0;
 int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1, Triangle& out_tri2, bool test = false)
 {
     // Make sure plane normal is indeed normal
@@ -825,7 +1304,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // Test
         if (test) {
             out_tri1 = in_tri;
-            out_tri1.colour = pink;
+            out_tri1.colour = Colours::pink;
 
             return 1; // Test.
         }
@@ -846,6 +1325,15 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
 
             out_tri1 = in_tri;
 
+            //std::cout << "Here." << std::endl;
+            //printRateCounter++;
+            //if (printRateCounter % 1000 == 0) {
+            //    std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
+            //}
+
+            //std::cout << "No tri generated : " << std::endl;
+            //std::cout << "\t same tri := " << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
+
             return 1; // Just the one returned original triangle is valid
         }
     }
@@ -859,7 +1347,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // the plane, the triangle simply becomes a smaller triangle
 
         // Copy appearance info to new triangle
-        out_tri1.colour = blue/*in_tri.colour*/;
+        out_tri1.colour = Colours::blue/*in_tri.colour*/;
 
         // The inside point is valid, so keep that...
         out_tri1.a = *inside_points[0];
@@ -867,7 +1355,15 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // but the two new points are at the locations where the 
         // original sides of the triangle (lines) intersect with the plane
         out_tri1.b.position = VectorIntersectPlane({*inside_points[0], *outside_points[0]}, plane);
+        out_tri1.b.texCoord = outside_points[0]->texCoord;
         out_tri1.c.position = VectorIntersectPlane({*inside_points[0], *outside_points[1]}, plane);
+        out_tri1.c.texCoord = outside_points[1]->texCoord;
+
+        //std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
+
+        //std::cout << "Generated 1 tri : " << std::endl;
+        //std::cout << "\t tri1 a := " << out_tri1.a.texCoord.x << ", " << out_tri1.a.texCoord.y << ", b := " << out_tri1.b.texCoord.x << ", " << out_tri1.b.texCoord.y << ", c := " << out_tri1.c.texCoord.x << ", " << out_tri1.c.texCoord.y << ", " << std::endl;
+
 
         return 1; // Return the newly formed single triangle
     }
@@ -882,9 +1378,9 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // represent a quad with two new triangles
 
         // Copy appearance info to new triangles
-        out_tri1.colour = red/*in_tri.colour*/;
+        out_tri1.colour = Colours::red/*in_tri.colour*/;
 
-        out_tri2.colour = green/*in_tri.colour*/;
+        out_tri2.colour = Colours::green/*in_tri.colour*/;
 
         // The first triangle consists of the two inside points and a new
         // point determined by the location where one side of the triangle
@@ -892,6 +1388,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         out_tri1.a = *inside_points[0];
         out_tri1.b = *inside_points[1];
         out_tri1.c.position = VectorIntersectPlane({ *inside_points[0], *outside_points[0] }, plane);
+        out_tri1.c.texCoord = outside_points[0]->texCoord;
 
         // The second triangle is composed of one of he inside points, a
         // new point determined by the intersection of the other side of the 
@@ -899,7 +1396,14 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
 
         out_tri2.a = *inside_points[1];
         out_tri2.b.position = VectorIntersectPlane({ *inside_points[1], *outside_points[0] }, plane);
+        out_tri2.b.texCoord = outside_points[0]->texCoord;
         out_tri2.c = out_tri1.c;
+
+        //std::cout << "Generated 2 tris : " << std::endl;
+        //std::cout << "\t tri1 a := " << out_tri1.a.texCoord.x << ", " << out_tri1.a.texCoord.y << ", b := " << out_tri1.b.texCoord.x << ", " << out_tri1.b.texCoord.y << ", c := " << out_tri1.c.texCoord.x << ", " << out_tri1.c.texCoord.y << ", " << std::endl;
+        //std::cout << "\t tri2 a := " << out_tri2.a.texCoord.x << ", " << out_tri2.a.texCoord.y << ", b := " << out_tri2.b.texCoord.x << ", " << out_tri2.b.texCoord.y << ", c := " << out_tri2.c.texCoord.x << ", " << out_tri2.c.texCoord.y << ", " << std::endl;
+
+        //std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
 
         return 2; // Return two newly formed triangles which form a quad
     }
@@ -922,7 +1426,11 @@ Plane planeTopScreenSpace       = { { 0.0f, -1.0f, 0.0f }, {{ 0.0f, screenHeight
 Plane planeLeftScreenSpace      = { { 1.0f, 0.0f, 0.0f }, {{ 0.0f, 0.0f, 0.0f }} };
 Plane planeRightScreenSpace     = { { -1.0f, 0.0f, 0.0f }, {{ screenWidth - 1, 0.0f, 0.0f } } };
 
-void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Triangle modelTriangle, Mat4x4& modelMatrix, Vector3 cameraPosition, Vector3 cameraDirection, Mat4x4& viewMatrix, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour, bool debugDraw = false) {
+void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
+                                                        , int curTriangleIndex, int currentTextureIndex, Triangle& modelTriangle, Mat4x4& modelMatrix
+                                                        , Vector3 cameraPosition, Vector3 cameraDirection
+                                                        , const Mat4x4& viewMatrix, const Mat4x4& projectionMatrix
+                                                        , int lineThickness, Colour lineColour, bool debugDraw = false) {
 
     //cameraPosition.y *= -1.0f;
 
@@ -930,6 +1438,10 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
     transformedTriangle.a.position.y *= -1.0f;
     transformedTriangle.b.position.y *= -1.0f;
     transformedTriangle.c.position.y *= -1.0f;
+
+    //transformedTriangle.a.texCoord.y *= -1.0f;
+    //transformedTriangle.b.texCoord.y *= -1.0f;
+    //transformedTriangle.c.texCoord.y *= -1.0f;
 
     Vector3 normal, lineA, lineB;
     lineA = transformedTriangle.b.position - transformedTriangle.a.position;
@@ -958,7 +1470,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
         // additional triangles. 
         int nClippedTriangles = 0;
         Triangle clipped[2];
-        Triangle curTriangle = Triangle{ {viewTransformedA}, {viewTransformedB}, {viewTransformedC }, white };
+        Triangle curTriangle = Triangle{ {viewTransformedA, modelTriangle.a.texCoord}, {viewTransformedB, modelTriangle.b.texCoord}, {viewTransformedC, modelTriangle.c.texCoord }, Colours::white };
         nClippedTriangles = TriangleClipAgainstPlane(planeNear, curTriangle, clipped[0], clipped[1]);
 
         for (int n = 0; n < nClippedTriangles; n++)
@@ -985,7 +1497,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
             projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
 
-            Triangle curLargeScreenSpaceTriangle = { projectedPointA, projectedPointB, projectedPointC, clipped[n].colour };
+            Triangle curLargeScreenSpaceTriangle = { {projectedPointA, clipped[n].a.texCoord}, {projectedPointB, clipped[n].b.texCoord}, {projectedPointC, clipped[n].c.texCoord}, clipped[n].colour };
 
             std::queue<Triangle> listOfTrianglesToBeCheckeddForClippingAndRendered;
 
@@ -1038,7 +1550,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
                 //std::cout << "Drawing something? " << std::endl;
                 Triangle curTriangle = listOfTrianglesToBeCheckeddForClippingAndRendered.front();
                 listOfTrianglesToBeCheckeddForClippingAndRendered.pop();
-                DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangle, normal, depth, lineThickness);
+                DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, depth, lineThickness);
+                //DrawTriangleScreenSpaceScanLine(imageData, imageDepthData, imageWidth, curTriangle, normal, depth, lineThickness);
+                //std::cout << "Finished drawing." << std::endl;
             }
         }
     }
@@ -1079,6 +1593,6 @@ void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageDat
 
     for (int i = 0; i < currentMesh.triangles.size(); i++)
     {
-        DrawTriangleOnScreenFromWorldTriangleWithClipping(imageData, imageDepthData, imageWidth, imageHeight, currentMesh.triangles[i], modelMatrix, cameraPosition, cameraDirection, viewMatrix, projectionMatrix, lineThickness, lineColour, debugDraw);
+        DrawTriangleOnScreenFromWorldTriangleWithClipping(imageData, imageDepthData, imageWidth, imageHeight, i, currentMesh.textureIndex, currentMesh.triangles[i], modelMatrix, cameraPosition, cameraDirection, viewMatrix, projectionMatrix, lineThickness, lineColour, debugDraw);
     }
 }

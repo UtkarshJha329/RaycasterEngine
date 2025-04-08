@@ -10,9 +10,12 @@
 
 #include "Instrumentor.h"
 #include "Geometry.h"
+#include "Model.h"
 #include "RenderGeometry.h"
 #include "MeshLoader.h"
 #include "CameraUtils.h"
+
+std::vector<Texture> Model::textures;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -106,6 +109,7 @@ std::string modelsPath = "Assets/Models/";
 std::string testCubeFileName = "TestCube.obj";
 std::string testBlenderMonkeyFileName = "Suzanne.obj";
 std::string testUtahTeaPotFileName = "UtahTeapot.obj";
+std::string testCubeTexturedFileName = "TestCubeTextured.obj";
 
 bool pressedRight = false;
 bool pressedLeft = false;
@@ -131,10 +135,11 @@ int main()
 {
     Instrumentor::Instance().BeginSession("Simple Software Renderer.");
 
-    Mesh randomMesh;
+    //Mesh randomMesh;
     //LoadMeshFromOBJFile(randomMesh, modelsPath, testCubeFileName);
     //LoadMeshFromOBJFile(randomMesh, modelsPath, testBlenderMonkeyFileName);
-    LoadMeshFromOBJFile(randomMesh, modelsPath, testUtahTeaPotFileName);
+    //LoadMeshFromOBJFile(randomMesh, modelsPath, testUtahTeaPotFileName);
+    //LoadMeshFromOBJFile(randomMesh, modelsPath, testCubeTexturedFileName);
 
     Colour backgroundColour = { 255, 255, 255, 255 };
     Colour red = { 255, 0, 0, 255 };
@@ -285,6 +290,35 @@ int main()
     Vector3 rotationAxis = { 0.0f, 0.0f, 0.0f };
 
     float angle = 0.0f;
+    float rotationSpeed = 10.0f;
+
+    Model testCubeModel;
+    //LoadModel(modelsPath + testCubeFileName, testCubeModel);
+    //LoadModel(modelsPath + testUtahTeaPotFileName, testCubeModel);
+    //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
+    LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
+
+    //for (int i = 0; i < Model::textures.size(); i++)
+    //{
+    //    Texture* curTexture = &Model::textures[i];
+    //    std::cout << curTexture->data.size() << std::endl;
+    //    //std::cout << curTexture->width << ", " << curTexture->height << std::endl;
+    //    for (int y = 0; y < curTexture->height; y++)
+    //    {
+    //        std::cout << "Y := " << y << std::endl;
+    //        for (int x = 0; x < curTexture->width; x++)
+    //        {
+    //            //std::cout << x << std::endl;
+    //            Colour curColourOfTexture = GetColourFromTexCoord(*curTexture, Vector2{ x / (float)curTexture->width, y / (float)curTexture->height});
+    //            //std::cout << (int)curColourOfTexture.r << ", " << (int)curColourOfTexture.g << ", " << (int)curColourOfTexture.b << std::endl;
+    //            std::cout << (int)curColourOfTexture.r << std::endl;
+    //        }
+    //    }
+    //}
+
+    //Texture testTexture;
+    ////LoadTextureFromFile("Assets/Models/testImage.jpg", testTexture);
+    //LoadTextureFromFile("Assets/Models/SimpleUV05.png", testTexture);
 
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
@@ -305,7 +339,7 @@ int main()
         ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
 
         if (!freezeRotation) {
-            angle -= (float)deltaTime;
+            angle -= rotationSpeed * deltaTime;
             if (angle <= 0.0f) {
                 angle += 360.0f;
             }
@@ -383,10 +417,13 @@ int main()
         cameraRightDirection = glm::cross({ 0.0f, 1.0f, 0.0f }, cameraLookingDirection);
 
 
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[0], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Model::textures[0].width, Model::textures[0].height, 0, GL_RGBA, GL_UNSIGNED_BYTE, Model::textures[0].data.data());
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, testTexture.width, testTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, testTexture.data.data());
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glUseProgram(shaderProgram);

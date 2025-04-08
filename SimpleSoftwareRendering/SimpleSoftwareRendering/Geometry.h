@@ -43,6 +43,7 @@ class Point {
 
 public:
 	Vector3 position;
+	Vector2 texCoord;
 };
 
 class LineSegment {
@@ -123,13 +124,6 @@ Vector3 VectorIntersectPlane(const LineSegment& lineSegmentToCheck, Plane& plane
 	Vector3 lineToIntersect = lineStartToEnd * t;
 	return lineSegmentToCheck.a.position + lineToIntersect;
 }
-
-class Mesh {
-
-public:
-
-	std::vector<Triangle> triangles;
-};
 
 Triangle ApplyTransformToTriangle(Triangle curTriangle, Mat4x4& transformMatrix) {
 

@@ -11,10 +11,16 @@ public:
     unsigned char a;
 };
 
-Colour white    = { 255, 255, 255, 255 };
-Colour black    = { 0, 0, 0, 255 };
-Colour red      = { 255, 0, 0, 255 };
-Colour green    = { 0, 255, 0, 255 };
-Colour blue     = { 0, 0, 255, 255 };
-Colour yellow   = { 255, 255, 0, 255 };
-Colour pink     = { 238, 130, 238, 255 };
+class Colours {
+
+public:
+
+    static Colour white;
+    static Colour black;
+    static Colour red;
+    static Colour green;
+    static Colour blue;
+    static Colour yellow;
+    static Colour pink;
+
+};
