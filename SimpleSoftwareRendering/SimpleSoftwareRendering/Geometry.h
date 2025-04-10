@@ -43,7 +43,7 @@ class Point {
 
 public:
 	Vector3 position;
-	Vector2 texCoord;
+	Vector3 texCoord;
 	Colour colour;
 };
 

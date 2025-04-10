@@ -63,18 +63,19 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
         // texture coordinates
         if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
         {
-            glm::vec2 vec;
+            Vector3 vec;
             // a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
             // use models where a vertex can have multiple texture coordinates so we always take the first set (0).
             vec.x = mesh->mTextureCoords[0][i].x;
             vec.y = mesh->mTextureCoords[0][i].y;
+            vec.z = 0.0f;
             curPoint.texCoord = vec;
 
             //std::cout << "Cur point := " << curPoint.position.x << ", " << curPoint.position.y << ", " << curPoint.position.z << ", Tex coords := " << curPoint.texCoord.x << ", " << curPoint.texCoord.y << std::endl;
         }
         else {
             std::cout << "No texture coordinates." << std::endl;
-            curPoint.texCoord = glm::vec2(0.0f, 0.0f);
+            curPoint.texCoord = Vector3(0.0f, 0.0f, 0.0f);
         }
 
         points.push_back(curPoint);
@@ -161,7 +162,7 @@ void LoadMeshFromOBJFile(Mesh& meshToFill, std::string filePath, std::string fil
 	std::string curLineText = "";
 
     std::vector<Vector3> vertices;
-    std::vector<Vector2> textureCoordinates;
+    std::vector<Vector3> textureCoordinates;
 
     while (std::getline(fileToReadStream, curLineText)) {
 
@@ -173,7 +174,7 @@ void LoadMeshFromOBJFile(Mesh& meshToFill, std::string filePath, std::string fil
             vertices.push_back(curVertex);
         }
         else if (tokens[0] == "vt") {
-            Vector2 curTextureCoordinate = Vector2{ std::stof(tokens[1]), std::stof(tokens[2]) };
+            Vector3 curTextureCoordinate = Vector3{ std::stof(tokens[1]), std::stof(tokens[2]), 0.0f };
             textureCoordinates.push_back(curTextureCoordinate);
         }
         else if (tokens[0] == "f") {
