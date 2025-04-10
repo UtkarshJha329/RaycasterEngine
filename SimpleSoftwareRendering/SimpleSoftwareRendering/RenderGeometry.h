@@ -1127,10 +1127,6 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
                         //g = texCoord.y * 255;
                         //b = 0;
 
-                        //r = texCoord.x * depth * 255;
-                        //g = texCoord.y * depth * 255;
-                        //b = 0;
-
                         imageData[index + 0] = r;
                         imageData[index + 1] = g;
                         imageData[index + 2] = b;
@@ -1377,16 +1373,6 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
     // Make sure plane normal is indeed normal
     plane.normal = glm::normalize(plane.normal);
 
-    // Create two temporary storage arrays to classify points either side of plane
-    // If distance sign is positive, point lies on "inside" of plane
-    Point* inside_points[3];  int nInsidePointCount = 0;
-    Point* outside_points[3]; int nOutsidePointCount = 0;
-
-    // Get signed distance of each point in triangle to plane
-    float d0 = DistanceFromPointToPlane(in_tri.a, plane);
-    float d1 = DistanceFromPointToPlane(in_tri.b, plane);
-    float d2 = DistanceFromPointToPlane(in_tri.c, plane);
-
     float da = DistanceFromPointToPlane(in_tri.a, plane);
     float db = DistanceFromPointToPlane(in_tri.b, plane);
     float dc = DistanceFromPointToPlane(in_tri.c, plane);
@@ -1417,7 +1403,7 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             Point e;
             LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
             float le = glm::length(e.position - in_tri.b.position) / glm::length(in_tri.c.position - in_tri.b.position);
-            e.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.c.texCoord, ld);
+            e.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.c.texCoord, le);
 
             // make two triangles := { a, b, d} & {d, b, e}
             out_tri1.a = in_tri.a;
@@ -1427,6 +1413,8 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             out_tri2.a = d;
             out_tri2.b = in_tri.b;
             out_tri2.c = e;
+
+            //std::cout << "Two triangles : = { a, b, d } & { d, b, e }" << std::endl;
 
             return 2; // Since we are making 2 triangles.
         }
@@ -1454,6 +1442,8 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             out_tri2.b = in_tri.c;
             out_tri2.c = e;
 
+            //std::cout << "Two triangles : = {a, c, d} & {d, c, e}" << std::endl;
+
             return 2; // Since we are making 2 triangles.
         }
         if (db < 0.0f && dc < 0.0f) {
@@ -1467,12 +1457,14 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             Point e;
             LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, e.position);
             float le = glm::length(e.position - in_tri.a.position) / glm::length(in_tri.c.position - in_tri.a.position);
-            e.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.c.texCoord, ld);
+            e.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.c.texCoord, le);
 
             // make one triangle := {a, d, e}
             out_tri1.a = in_tri.a;
             out_tri1.b = d;
             out_tri1.c = e;
+
+            //std::cout << "One triangle : = {a, d, e}" << std::endl;
 
             return 1; // Since we are making 1 triangles.
 
@@ -1506,6 +1498,8 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             out_tri2.b = in_tri.c;
             out_tri2.c = e;
 
+            //std::cout << "Two triangles : = {b, c, d} & {d, c, e}" << std::endl;
+
             return 2; // Since we are making 2 triangles.
         }
         if (dc < 0.0f && da < 0.0f) {
@@ -1526,6 +1520,8 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             out_tri1.b = d;
             out_tri1.c = e;
 
+            //std::cout << "One triangle : = {b, d, e}" << std::endl;
+
             return 1; // Since we are making 1 triangles.
         }
     }
@@ -1543,158 +1539,15 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
             float le = glm::length(e.position - in_tri.b.position) / glm::length(in_tri.c.position - in_tri.b.position);
             e.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.c.texCoord, le);
 
-            // make two triangles := {c, d, e}
+            // make one triangles := {c, d, e}
             out_tri1.a = in_tri.c;
             out_tri1.b = d;
             out_tri1.c = e;
 
+            //std::cout << "One triangles : = {c, d, e}" << std::endl;
+
             return 1;
         }
-    }
-
-    if (d0 >= 0) { inside_points[nInsidePointCount++] = &in_tri.a; }
-    else { outside_points[nOutsidePointCount++] = &in_tri.a; }
-    if (d1 >= 0) { inside_points[nInsidePointCount++] = &in_tri.b; }
-    else { outside_points[nOutsidePointCount++] = &in_tri.b; }
-    if (d2 >= 0) { inside_points[nInsidePointCount++] = &in_tri.c; }
-    else { outside_points[nOutsidePointCount++] = &in_tri.c; }
-
-    Vector2 yellow = { 1.0f, 1.0f };
-    Vector2 black = { 0.0f, 0.0f };
-
-    // Now classify triangle points, and break the input triangle into 
-    // smaller output triangles if required. There are four possible
-    // outcomes...
-
-    if (nInsidePointCount == 0)
-    {
-        // All points lie on the outside of plane, so clip whole triangle
-        // It ceases to exist
-
-        // Test
-        if (test) {
-            out_tri1 = in_tri;
-            out_tri1.colour = Colours::pink;
-
-            return 1; // Test.
-        }
-        else {
-            return 0; // No returned triangles are valid
-        }
-    }
-
-    if (nInsidePointCount == 3)
-    {
-        // All points lie on the inside of plane, so do nothing
-        // and allow the triangle to simply pass through
-        if(test)
-        {
-            return 0; // Test
-        }
-        else {
-
-            out_tri1 = in_tri;
-
-            //std::cout << "Here." << std::endl;
-            //printRateCounter++;
-            //if (printRateCounter % 1000 == 0) {
-            //    std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
-            //}
-
-            //std::cout << "No tri generated : " << std::endl;
-            //std::cout << "\t same tri := " << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
-
-            return 1; // Just the one returned original triangle is valid
-        }
-    }
-
-    if (nInsidePointCount == 1 && nOutsidePointCount == 2)
-    {
-        if (test) {
-            return 0;
-        }
-        // Triangle should be clipped. As two points lie outside
-        // the plane, the triangle simply becomes a smaller triangle
-
-        // Copy appearance info to new triangle
-        out_tri1.colour = Colours::blue/*in_tri.colour*/;
-
-        // The inside point is valid, so keep that...
-        out_tri1.a = *inside_points[0];
-        //out_tri1.b.texCoord = inside_points[0]->texCoord;
-
-        // but the two new points are at the locations where the 
-        // original sides of the triangle (lines) intersect with the plane
-
-        //float t = 0;
-        //out_tri1.b.position = VectorIntersectPlane({out_tri1.a, *outside_points[0]}, plane, t);
-        LinePlaneIntersection(out_tri1.a.position, outside_points[0]->position, plane, out_tri1.b.position);
-        float pT = glm::length(out_tri1.b.position - out_tri1.a.position) / glm::length(outside_points[0]->position - out_tri1.a.position);
-        out_tri1.b.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, pT);
-        //out_tri1.b.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, 1.0f - pT);
-
-
-        //out_tri1.c.position = VectorIntersectPlane({ out_tri1.a, *outside_points[1]}, plane, t);
-        LinePlaneIntersection(out_tri1.a.position, outside_points[1]->position, plane, out_tri1.c.position);
-        pT = glm::length(out_tri1.c.position - out_tri1.a.position) / glm::length(outside_points[1]->position - out_tri1.a.position);
-        out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, pT);
-        //out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, 1.0f - pT);
-
-        //pX = glm::length(out_tri1.c.position - out_tri1.a.position) / glm::length(outside_points[1]->position - out_tri1.a.position);
-        //out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, pX);
-        //out_tri1.c.texCoord = yellow;
-
-        return 1; // Return the newly formed single triangle
-    }
-
-    if (nInsidePointCount == 2 && nOutsidePointCount == 1)
-    {
-        if (test) {
-            return 0;
-        }
-        // Triangle should be clipped. As two points lie inside the plane,
-        // the clipped triangle becomes a "quad". Fortunately, we can
-        // represent a quad with two new triangles
-
-        // Copy appearance info to new triangles
-        out_tri1.colour = Colours::red/*in_tri.colour*/;
-
-        out_tri2.colour = Colours::green/*in_tri.colour*/;
-
-        // The first triangle consists of the two inside points and a new
-        // point determined by the location where one side of the triangle
-        // intersects with the plane
-        out_tri1.a = *inside_points[0];
-        out_tri1.b = *inside_points[1];
-
-        float t = 0;
-        out_tri1.c.position = VectorIntersectPlane({ *inside_points[0], *outside_points[0] }, plane, t);
-        out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, t);
-        //out_tri1.c.texCoord = t * (outside_points[0]->texCoord - inside_points[0]->texCoord) + inside_points[0]->texCoord;
-        //out_tri1.c.texCoord = outside_points[0]->texCoord;
-        //out_tri1.c.texCoord = black;
-        //out_tri1.c.texCoord = LerpVector2(yellow, black, t);
-
-        // The second triangle is composed of one of he inside points, a
-        // new point determined by the intersection of the other side of the 
-        // triangle and the plane, and the newly created point above
-
-        out_tri2.a = *inside_points[1];
-        out_tri2.b.position = VectorIntersectPlane({ *inside_points[1], *outside_points[0] }, plane, t);
-        out_tri1.b.texCoord = LerpVector2(inside_points[1]->texCoord, outside_points[0]->texCoord, t);
-        //out_tri1.b.texCoord = t * (outside_points[0]->texCoord - inside_points[1]->texCoord) + inside_points[1]->texCoord;
-        //out_tri1.b.texCoord = yellow;
-        //out_tri1.b.texCoord = outside_points[0]->texCoord;
-        //out_tri1.b.texCoord = LerpVector2(yellow, black, t);
-        out_tri2.c = out_tri1.c;
-
-        //std::cout << "Generated 2 tris : " << std::endl;
-        //std::cout << "\t tri1 a := " << out_tri1.a.texCoord.x << ", " << out_tri1.a.texCoord.y << ", b := " << out_tri1.b.texCoord.x << ", " << out_tri1.b.texCoord.y << ", c := " << out_tri1.c.texCoord.x << ", " << out_tri1.c.texCoord.y << ", " << std::endl;
-        //std::cout << "\t tri2 a := " << out_tri2.a.texCoord.x << ", " << out_tri2.a.texCoord.y << ", b := " << out_tri2.b.texCoord.x << ", " << out_tri2.b.texCoord.y << ", c := " << out_tri2.c.texCoord.x << ", " << out_tri2.c.texCoord.y << ", " << std::endl;
-
-        //std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
-
-        return 2; // Return two newly formed triangles which form a quad
     }
 }
 
