@@ -112,6 +112,8 @@ std::string testCubeFileName = "TestCube.obj";
 std::string testBlenderMonkeyFileName = "Suzanne.obj";
 std::string testUtahTeaPotFileName = "UtahTeapot.obj";
 std::string testCubeTexturedFileName = "TestCubeTextured.obj";
+std::string truckTexturedFileName = "Truck/Truck.obj";
+std::string utahTeapotTexturedFileName = "UtahTeapot/UtahTeapot.obj";
 
 bool freezeRotation = true;
 
@@ -289,10 +291,13 @@ int main()
     float rotationSpeed = 10.0f;
 
     Model testCubeModel;
+    //Model eyeballModel;
     //LoadModel(modelsPath + testCubeFileName, testCubeModel);
     //LoadModel(modelsPath + testUtahTeaPotFileName, testCubeModel);
     //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
-    LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
+    LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
 
     //for (int i = 0; i < Model::textures.size(); i++)
     //{
@@ -332,7 +337,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-        ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
+        ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 0.0f);
 
         //freezeRotation = (GetKeyHeld(KEY_P));
         if (GetKeyPressedInThisFrame(KEY_P)) {
@@ -423,7 +428,11 @@ int main()
 
 
         //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
-        DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[0], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[0], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+        for (int i = 0; i < testCubeModel.meshes.size(); i++)
+        {
+            DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+        }
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());

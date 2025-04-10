@@ -999,7 +999,7 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
 }
 
 void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
-	, int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 invW
+	, int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 invDepth, Vector3 invW
 	, int lineThickness)
 {
 	Triangle triangle = drawTriangle;
@@ -1102,9 +1102,9 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 
 			//std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
 
-			//float depth = 1.0f / ((alpha * invDepthA) + (beta * invDepthB) + (gamma * invDepthC));
+			float depth = 1.0f / ((alpha * invDepth.x) + (beta * invDepth.y) + (gamma * invDepth.z));
 			float w = 1.0f / ((alpha * invW.x) + (beta * invW.y) + (gamma * invW.z));
-			float depth = w;
+			//float depth = w;
 			//Vector2 texCoord = (alpha * texCoordA * invDepthA) + (beta * texCoordB * invDepthB) + (gamma * texCoordC * invDepthC);
 			float texW = 1.0f / ((alpha * texWx) + (beta * texWy) + (gamma * texWz));
 			Vector2 texCoord = (alpha * texCoordA) + (beta * texCoordB) + (gamma * texCoordC);
@@ -1116,7 +1116,7 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 
 			int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-			if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] > depth)
+			if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
 			{
 				float cutOffValueFloat = 0.0f;
 				//if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
@@ -1160,10 +1160,10 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 
 	//printRateCounter++;
 
-	lineThickness = 0;
-	DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
-	DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
-	DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
+	//lineThickness = 0;
+	//DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
+	//DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
+	//DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
 
 }
 
@@ -1641,11 +1641,8 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 			projectedPointC = projectedPointC / projectedPointC.w;
 
 			// Get depth for Z-Buffer
-			//Vector3 invDepth = Vector3{ 1.0f / projectedPointA.z, 1.0f / projectedPointB.z, 1.0f / projectedPointC.z };
+			Vector3 invDepth = Vector3{ 1.0f / projectedPointA.z, 1.0f / projectedPointB.z, 1.0f / projectedPointC.z };
 
-			//clipped[n].c.texCoord *= invDepth.z;
-			//clipped[n].a.texCoord *= invDepth.x;
-			////clipped[n].b.texCoord *= invDepth.y;
 			clipped[n].a.texCoord *= invW.x;
 			clipped[n].b.texCoord *= invW.y;
 			clipped[n].c.texCoord *= invW.z;
@@ -1719,7 +1716,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				listOfTrianglesToBeCheckeddForClippingAndRendered.pop();
 				//std::cout << "READING MESH TEXTURE INDEX 1 : " << currentTextureIndex << std::endl;
 				//DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, invDepth, lineThickness);
-				DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, invW, lineThickness);
+				DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, invDepth, invW, lineThickness);
 				//DrawTriangleScreenSpaceScanLine(imageData, imageDepthData, imageWidth, curTriangle, normal, depth, lineThickness);
 				//std::cout << "Finished drawing." << std::endl;
 			}
