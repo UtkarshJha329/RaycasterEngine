@@ -113,13 +113,7 @@ std::string testBlenderMonkeyFileName = "Suzanne.obj";
 std::string testUtahTeaPotFileName = "UtahTeapot.obj";
 std::string testCubeTexturedFileName = "TestCubeTextured.obj";
 
-bool pressedRight = false;
-bool pressedLeft = false;
-bool pressedUp = false;
-bool pressedDown = false;
-
-bool freezeRotation = false;
-bool pressedK = false;
+bool freezeRotation = true;
 
 const int lineThickness = 2;
 
@@ -340,7 +334,10 @@ int main()
         ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
         ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 1.0f);
 
-        freezeRotation = (GetKeyHeld(KEY_P));
+        //freezeRotation = (GetKeyHeld(KEY_P));
+        if (GetKeyPressedInThisFrame(KEY_P)) {
+            freezeRotation = !freezeRotation;
+        }
 
         if (!freezeRotation) {
             //angle -= rotationSpeed * deltaTime;

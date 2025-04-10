@@ -675,12 +675,16 @@ void DrawTrianglePixel(std::vector<unsigned char>& imageData, std::vector<float>
                         const Vector2& aFloat, const Vector2& bFloat, const Vector2& cFloat,
                         const float& biasEdgeg0Float, const float& biasEdgeg1Float, const float& biasEdgeg2Float,
                         const float& areaOfTriangle,
-                        const float& depthA, const float& depthB, const float& depthC,
+                        const float& invDepthA, const float& invDepthB, const float& invDepthC,
+                        const Vector2& texCoordA, const Vector2& texCoordB, const Vector2& texCoordC,
                         const int& imageWidth,
                         const float& startScanlineX, const float& endScanlineX,
                         const Vector4& startColourForThisScanLine, const Vector4& endColourForThisScanLine,
                         const Vector2& startTexCoordForThisScanLine, const Vector2& endTexCoordForThisScanLine,
                         const float& colourTextureMixFactor) {
+    
+    //std::cout << "WORKING HERE #4." << std::endl;
+
     Vector2Int curPoint = Vector2Int{ x, y };
     Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
 
@@ -702,10 +706,13 @@ void DrawTrianglePixel(std::vector<unsigned char>& imageData, std::vector<float>
 
     //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
 
-    float depth = ((alpha * depthA) + (beta * depthB) + (gamma * depthC));
+    float depth = 1.0f / ((alpha * invDepthA) + (beta * invDepthB) + (gamma * invDepthC));
+    Vector2 texCoord = (alpha * texCoordA * invDepthA) + (beta * texCoordB * invDepthB) + (gamma * texCoordC * invDepthC);
+    texCoord *= depth;
+
     int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-    if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+    if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] > depth)
     {
         {
             int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
@@ -713,14 +720,13 @@ void DrawTrianglePixel(std::vector<unsigned char>& imageData, std::vector<float>
             {
                 float tX = (x - startScanlineX) / ((endScanlineX - startScanlineX) + 0.001f);
 
-
                 Vector4 curColour = LerpVector4(startColourForThisScanLine, endColourForThisScanLine, tX);
                 Vector2 curTexCoord = LerpVector2(startTexCoordForThisScanLine, endTexCoordForThisScanLine, tX);
 
                 //curColour = { 255, 255, 255, 255 };
 
-
-                Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
+                //Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
+                Colour texelColour = GetColourFromTexCoord(*curTex, texCoord);
                 float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor * curColour.r));
                 float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor * curColour.g));
                 float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor * curColour.b));
@@ -729,8 +735,12 @@ void DrawTrianglePixel(std::vector<unsigned char>& imageData, std::vector<float>
                 //g = tY2 * 255;
                 //b = 0;
 
-                //r = curTexCoord.x * 255;
-                //g = curTexCoord.y * 255;
+                //r = curTexCoord.x * depth * 255;
+                //g = curTexCoord.y * depth * 255;
+                //b = 0;
+
+                //r = texCoord.x * depth * 255;
+                //g = texCoord.y * depth * 255;
                 //b = 0;
 
                 imageData[index + 0] = r;
@@ -752,13 +762,13 @@ void DrawScanLine(std::vector<unsigned char>& imageData, std::vector<float>& ima
                     const Vector2& aFloat, const Vector2& bFloat, const Vector2& cFloat,
                     const float& biasEdgeg0Float, const float& biasEdgeg1Float, const float& biasEdgeg2Float,
                     const float& areaOfTriangle,
-                    const float& depthA, const float& depthB, const float& depthC,
+                    const float& invDepthA, const float& invDepthB, const float& invDepthC,
+                    const Vector2& texCoordA, const Vector2& texCoordB, const Vector2& texCoordC,
                     const int& imageWidth,
                     float startScanlineX, float endScanlineX,
                     Vector4 startColourForThisScanLine, Vector4 endColourForThisScanLine,
                     Vector2 startTexCoordForThisScanLine, Vector2 endTexCoordForThisScanLine,
                     const float& colourTextureMixFactor) {
-
 
     if (startScanlineX > endScanlineX) {
         std::swap(startScanlineX, endScanlineX);
@@ -767,7 +777,7 @@ void DrawScanLine(std::vector<unsigned char>& imageData, std::vector<float>& ima
     }
 
     for (int x = startScanlineX; x <= endScanlineX; x++) {
-        DrawTrianglePixel(imageData, imageDepthData, curTex, x, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, depthA, depthB, depthC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
+        DrawTrianglePixel(imageData, imageDepthData, curTex, x, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, invDepthA, invDepthC, invDepthC, texCoordA, texCoordB, texCoordC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
     }
 }
 
@@ -776,10 +786,9 @@ int printRate = 5000;
 std::string printString = "";
 
 void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
-                                            , int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 depth
+                                            , int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 invDepth
                                             , int lineThickness)
 {
-
     Triangle triangle = drawTriangle;
     triangle.a.colour = Colours::blue;
     triangle.b.colour = Colours::red;
@@ -804,10 +813,9 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     Vector3 projectedPointB = triangle.b.position;
     Vector3 projectedPointC = triangle.c.position;
 
-    float depthA = depth.z;
-    float depthB = depth.z;
-    float depthC = depth.z;
-
+    float invDepthA = invDepth.x;
+    float invDepthB = invDepth.y;
+    float invDepthC = invDepth.z;
 
     Vector2 aFloat = projectedPointB - projectedPointA;
     Vector2 bFloat = projectedPointC - projectedPointB;
@@ -835,7 +843,8 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     int divisionPointY = triangle.b.position.y;
 
     float x1 = triangle.b.position.x;
-    float x2 = (((triangle.a.position.x - triangle.c.position.x) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.b.position.y - triangle.c.position.y)) + triangle.c.position.x;
+    //float x2 = (((triangle.a.position.x - triangle.c.position.x) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.b.position.y - triangle.c.position.y)) + triangle.c.position.x;
+    float x2 = (triangle.c.position.x) + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 
     //float divisionYLerpParam = ((triangle.b.position.y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
     //Vector4 colourDivisionPoint = LerpVector4(colourC0, colourC2, divisionYLerpParam);
@@ -845,7 +854,10 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
     Vector4 colourC1 = { triangle.b.colour.r, triangle.b.colour.g, triangle.b.colour.b, triangle.b.colour.a };
     Vector4 colourC2 = { triangle.c.colour.r, triangle.c.colour.g, triangle.c.colour.b, triangle.c.colour.a };
 
+    //std::cout << "READING MESH TEXTURE INDEX 2 : " << currentTextureIndex << ", " << Model::textures.size() << std::endl;
     Texture* curTex = &Model::textures[currentTextureIndex];
+    //std::cout << curTex->width << ", " << curTex->height << std::endl;
+
     float colourTextureMixFactor = 0.0f;
     //colourTextureMixFactor = 1.0f;
 
@@ -859,6 +871,10 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
         smallerTriangle = 1; //bottom triangle is smaller.
     }
 
+    Vector2 texCoordA = triangle.a.texCoord;
+    Vector2 texCoordB = triangle.b.texCoord;
+    Vector2 texCoordC = triangle.c.texCoord;
+
     // DRAW TOP TRIANGLE.
     {
         float startScanlineX = x1;
@@ -869,28 +885,29 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
 
         for (int y = divisionPointY; y <= triangle.c.position.y; y++)
         {
-            //float tY = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
-            //float tY = ((y - divisionPointY) / ((triangle.c.position.y - divisionPointY) + 0.001f));
-            float tY2 = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
+            float tYB = ((y - triangle.b.position.y) / ((triangle.c.position.y - triangle.b.position.y) + 0.001f));
+            float tYA = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
 
-            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> SWAP COLOURS WHEN VERTICES ORDER ARE SWAPPED? <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            Vector4 startColourForThisScanLine = LerpVector4(colourC1, colourC2, tYB);
+            Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tYA);
 
-            Vector4 startColourForThisScanLine = LerpVector4(colourC1, colourC2, tY2);
-            Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.c.texCoord, tYB);
+            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tYA);            
 
-            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.c.texCoord, tY2);
-            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);            
+            bool upBigTriangle = true;
 
             if (smallerTriangle == 0) {
 
-                startColourForThisScanLine = LerpVector4(colourC0, colourC1, tY2);
-                endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+                startColourForThisScanLine = LerpVector4(colourC0, colourC1, tYA);
+                endColourForThisScanLine = LerpVector4(colourC0, colourC2, tYA);
 
-                startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tY2);
-                endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+                startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tYA);
+                endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tYA);
+
+                upBigTriangle = false;
             }
 
-            DrawScanLine(imageData, imageDepthData, curTex, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, depthA, depthB, depthC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
+            DrawScanLine(imageData, imageDepthData, curTex, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, invDepthA, invDepthB, invDepthC, texCoordA, texCoordB, texCoordC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
 
             startScanlineX += slopeX1;
             endScanlineX += slopeX2;
@@ -907,26 +924,57 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
 
         for (int y = divisionPointY; y > triangle.a.position.y; y--)
         {
-            //float tY = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
-            float tY = ((divisionPointY - y) / ((divisionPointY - triangle.a.position.y) + 0.001f));
-            float tY2 = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
+            float tYA = ((y - triangle.a.position.y) / ((triangle.c.position.y - triangle.a.position.y) + 0.001f));
 
-            Vector4 startColourForThisScanLine = LerpVector4(colourC0, colourC1, tY2);
-            Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+            Vector4 startColourForThisScanLine = LerpVector4(colourC0, colourC1, tYA);
+            Vector4 endColourForThisScanLine = LerpVector4(colourC0, colourC2, tYA);
 
-            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tY2);
-            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+            Vector2 startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tYA);
+            Vector2 endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tYA);
 
             if (smallerTriangle == 1) {
 
-                startColourForThisScanLine = LerpVector4(colourC1, colourC2, tY2);
-                endColourForThisScanLine = LerpVector4(colourC0, colourC2, tY2);
+                if (triangle.a.position.x < triangle.b.position.x) {
 
-                startTexCoordForThisScanLine = LerpVector2(triangle.b.texCoord, triangle.c.texCoord, tY2);
-                endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tY2);
+                    float tX = (endScanlineX - startScanlineX) / (triangle.a.position.x - triangle.b.position.x);
+
+                    Vector4 inBetweenColourX = LerpVector4(ColourToVector4(triangle.a.colour), ColourToVector4(triangle.b.colour), tX);
+                    Vector2 inBetweenTexCoordX = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tX);
+
+                    startColourForThisScanLine = LerpVector4(inBetweenColourX, ColourToVector4(triangle.c.colour), tYA);
+                    endColourForThisScanLine = LerpVector4(ColourToVector4(triangle.a.colour), ColourToVector4(triangle.c.colour), tYA);
+
+                    startTexCoordForThisScanLine = inBetweenTexCoordX;
+                    endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tYA);
+
+                    //startTexCoordForThisScanLine = Vector2{ 1.0f, 1.0f };
+                    //endTexCoordForThisScanLine = Vector2{ 0.0f, 0.0f };;
+
+                }
+                else if (triangle.a.position.x > triangle.b.position.x) {
+
+                    float tX = (endScanlineX - startScanlineX) / (triangle.a.position.x - triangle.b.position.x);
+                    float tYAB = (y - triangle.b.position.y) / (triangle.a.position.y - triangle.b.position.y);
+
+                    Vector2 texCoordsBaseBtoA = LerpVector2(triangle.b.texCoord, triangle.a.texCoord, tYAB);
+
+                    startTexCoordForThisScanLine = texCoordsBaseBtoA;
+                    //startTexCoordForThisScanLine = triangle.b.texCoord;
+                    endTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.c.texCoord, tYA);
+
+                    //startTexCoordForThisScanLine = Vector2{ 0.0f, 0.0f };
+                    //endTexCoordForThisScanLine = Vector2{ 1.0f, 1.0f };
+
+                }
+
+                //if (triangle.a.position.x > triangle.b.position.x) {
+                //    startTexCoordForThisScanLine = LerpVector2(triangle.a.texCoord, triangle.b.texCoord, tYA);
+                //    endTexCoordForThisScanLine = inBetweenTexCoordX;
+                //}
+
             }
 
-            DrawScanLine(imageData, imageDepthData, curTex, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, depthA, depthB, depthC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
+            DrawScanLine(imageData, imageDepthData, curTex, y, projectedPointA, projectedPointB, projectedPointC, aFloat, bFloat, cFloat, biasEdgeg0Float, biasEdgeg1Float, biasEdgeg2Float, areaOfTriangle, invDepthA, invDepthB, invDepthC, texCoordA, texCoordB, texCoordC, imageWidth, startScanlineX, endScanlineX, startColourForThisScanLine, endColourForThisScanLine, startTexCoordForThisScanLine, endTexCoordForThisScanLine, colourTextureMixFactor);
 
             startScanlineX -= slopeX1;
             endScanlineX -= slopeX2;
@@ -939,10 +987,176 @@ void DrawTriangleOnScreenFromScreenSpace(std::vector<unsigned char>& imageData, 
 
     //printRateCounter++;
 
-    //lineThickness = 1;
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
-    //DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
+    lineThickness = 0;
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
+
+}
+
+void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight
+    , int curTriangleIndex, int currentTextureIndex, const Triangle& drawTriangle, Vector3 triangleNormal, Vector3 invDepth, Vector3 invW
+    , int lineThickness)
+{
+    Triangle triangle = drawTriangle;
+    triangle.a.colour = Colours::blue;
+    triangle.b.colour = Colours::red;
+    triangle.c.colour = Colours::green;
+
+    Vector3 projectedPointA = triangle.a.position;
+    Vector3 projectedPointB = triangle.b.position;
+    Vector3 projectedPointC = triangle.c.position;
+
+    float invDepthA = invDepth.x;
+    float invDepthB = invDepth.y;
+    float invDepthC = invDepth.z;
+
+    Vector2 aFloat = projectedPointB - projectedPointA;
+    Vector2 bFloat = projectedPointC - projectedPointB;
+    Vector2 cFloat = projectedPointA - projectedPointC;
+
+    //float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y) * 0.5f;
+    float areaOfTriangle = EdgeFunction(triangle.a.position, triangle.b.position, triangle.c.position) * 0.5f;
+
+    Vector3 lightDir = Vector3{ 1.0f, 1.0f, 1.0f };
+    lightDir = glm::normalize(lightDir);
+    float normDotLightDirMax = glm::max(glm::dot(triangleNormal, lightDir), 0.0f);
+
+    Colour modifiedColour = triangle.colour;
+    modifiedColour.r = modifiedColour.r * normDotLightDirMax;
+    modifiedColour.g = modifiedColour.g * normDotLightDirMax;
+    modifiedColour.b = modifiedColour.b * normDotLightDirMax;
+    modifiedColour.a = modifiedColour.a;
+
+    float biasEdgeValueFloat = -0.00001f;
+    float biasEdgeg0Float = IsTopOrLeft(projectedPointB, projectedPointA) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg1Float = IsTopOrLeft(projectedPointC, projectedPointB) ? 0.0f : biasEdgeValueFloat;
+    float biasEdgeg2Float = IsTopOrLeft(projectedPointA, projectedPointC) ? 0.0f : biasEdgeValueFloat;
+
+    int divisionPointY = triangle.b.position.y;
+
+    Vector4 colourC0 = { triangle.a.colour.r, triangle.a.colour.g, triangle.a.colour.b, triangle.a.colour.a };
+    Vector4 colourC1 = { triangle.b.colour.r, triangle.b.colour.g, triangle.b.colour.b, triangle.b.colour.a };
+    Vector4 colourC2 = { triangle.c.colour.r, triangle.c.colour.g, triangle.c.colour.b, triangle.c.colour.a };
+
+    //std::cout << "READING MESH TEXTURE INDEX 2 : " << currentTextureIndex << ", " << Model::textures.size() << std::endl;
+    Texture* curTex = &Model::textures[currentTextureIndex];
+    //std::cout << curTex->width << ", " << curTex->height << std::endl;
+
+    float colourTextureMixFactor = 0.0f;
+    //colourTextureMixFactor = 1.0f;
+
+    int smallerTriangle = -1;
+    float lengthDiffCB = (triangle.c.position.y - triangle.b.position.y);
+    float lengthDiffBA = (triangle.a.position.y - triangle.b.position.y);
+    if (abs(lengthDiffBA) > abs(lengthDiffCB)) {
+        smallerTriangle = 0;//top triangle is smaller.
+    }
+    else if (abs(lengthDiffBA) < abs(lengthDiffCB)) {
+        smallerTriangle = 1; //bottom triangle is smaller.
+    }
+
+    Vector2 texCoordA = triangle.a.texCoord;
+    Vector2 texCoordB = triangle.b.texCoord;
+    Vector2 texCoordC = triangle.c.texCoord;
+
+    Vector2Int boundingBoxMin = Vector2Int{ (int)std::min(projectedPointA.x, projectedPointB.x), (int)std::min(projectedPointA.y, projectedPointB.y) };
+    Vector2Int boundingBoxMax = Vector2Int{ (int)std::max(projectedPointA.x, projectedPointB.x), (int)std::max(projectedPointA.y, projectedPointB.y) };
+
+    boundingBoxMin = Vector2Int{ (int)std::min((float)boundingBoxMin.x, projectedPointC.x), (int)std::min((float)boundingBoxMin.y, projectedPointC.y) };
+    boundingBoxMax = Vector2Int{ (int)std::max((float)boundingBoxMax.x, projectedPointC.x), (int)std::max((float)boundingBoxMax.y, projectedPointC.y) };
+
+    for (int y = boundingBoxMin.y; y <= boundingBoxMax.y; y++)
+    {
+        for (int x = boundingBoxMin.x; x <= boundingBoxMax.x; x++)
+        {
+            Vector2Int curPoint = Vector2Int{ x, y };
+            Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
+
+            Vector2 apFloat = curPointFloat - Vector2(projectedPointA);
+            Vector2 bpFloat = curPointFloat - Vector2(projectedPointB);
+            Vector2 cpFloat = curPointFloat - Vector2(projectedPointC);
+
+            float crossAFloat = EdgeFunction(triangle.b.position, triangle.c.position, Vector3{ curPointFloat, 0.0f });
+            float crossBFloat = EdgeFunction(triangle.c.position, triangle.a.position, Vector3{ curPointFloat, 0.0f });
+            float crossCFloat = EdgeFunction(triangle.a.position, triangle.b.position, Vector3{ curPointFloat, 0.0f });
+            //float crossAFloat = (aFloat.x * apFloat.y) - (apFloat.x * aFloat.y);
+            //float crossBFloat = (bFloat.x * bpFloat.y) - (bpFloat.x * bFloat.y);
+            //float crossCFloat = (cFloat.x * cpFloat.y) - (cpFloat.x * cFloat.y);
+
+            float crossAFloatBias = crossAFloat + biasEdgeg0Float;
+            float crossBFloatBias = crossBFloat + biasEdgeg1Float;
+            float crossCFloatBias = crossCFloat + biasEdgeg2Float;
+
+            float alpha = crossAFloat / areaOfTriangle;
+            float beta = crossBFloat / areaOfTriangle;
+            float gamma = crossCFloat / areaOfTriangle;
+
+            //std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
+
+            //float depth = 1.0f / ((alpha * invDepthA) + (beta * invDepthB) + (gamma * invDepthC));
+            float w = 1.0f / ((alpha * invW.x) + (beta * invW.y) + (gamma * invW.z));
+            float depth = w;
+            //Vector2 texCoord = (alpha * texCoordA * invDepthA) + (beta * texCoordB * invDepthB) + (gamma * texCoordC * invDepthC);
+            Vector2 texCoord = (alpha * texCoordA) + (beta * texCoordB) + (gamma * texCoordC);
+            texCoord *= w;
+            Vector4 curColour = (alpha * colourC0 * invDepthA) + (beta * colourC1 * invDepthB) + (gamma * colourC2 * invDepthC);
+            curColour *= depth;
+
+            int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
+
+            if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] > depth)
+            {
+                float cutOffValueFloat = 0.0f;
+                //if (crossA >= cutOffValue && crossB >= cutOffValue && crossC >= cutOffValue) {
+                if ((crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
+                    || crossAFloat <= cutOffValueFloat && crossBFloat <= cutOffValueFloat && crossCFloat <= cutOffValueFloat)
+                {
+                    int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
+                    if (index >= 0 && (index + 3) < imageData.size())
+                    {
+                        //curColour = { 255, 255, 255, 255 };
+
+                        //Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
+                        Colour texelColour = GetColourFromTexCoord(*curTex, texCoord);
+                        float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor * curColour.r));
+                        float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor * curColour.g));
+                        float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor * curColour.b));
+
+                        //r = texCoord.x * 255;
+                        //g = texCoord.y * 255;
+                        //b = 0;
+
+                        //r = texCoord.x * depth * 255;
+                        //g = texCoord.y * depth * 255;
+                        //b = 0;
+
+                        imageData[index + 0] = r;
+                        imageData[index + 1] = g;
+                        imageData[index + 2] = b;
+                        imageData[index + 3] = 255;
+
+
+                    }
+
+                    imageDepthData[depthDataIndex] = depth;
+                }
+            }
+        }
+    }
+
+
+
+    //if (printRateCounter % printRate == 0) {
+    //    std::cout << printString << std::endl;
+    //}
+
+    //printRateCounter++;
+
+    lineThickness = 0;
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointA, projectedPointB, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointB, projectedPointC, lineThickness, Colours::black);
+    DrawLineSegmentOnScreen(imageData, imageWidth, projectedPointC, projectedPointA, lineThickness, Colours::black);
 
 }
 
@@ -1163,22 +1377,180 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
     // Make sure plane normal is indeed normal
     plane.normal = glm::normalize(plane.normal);
 
-    // Return signed shortest distance from point to plane, plane normal must be normalised
-    auto dist = [&](Point& point)
-    {
-        //point = glm::normalize(point);
-        return (plane.normal.x * point.position.x + plane.normal.y * point.position.y + plane.normal.z * point.position.z - glm::dot(plane.normal, plane.pointOnPlane.position));
-    };
-
     // Create two temporary storage arrays to classify points either side of plane
     // If distance sign is positive, point lies on "inside" of plane
     Point* inside_points[3];  int nInsidePointCount = 0;
     Point* outside_points[3]; int nOutsidePointCount = 0;
 
     // Get signed distance of each point in triangle to plane
-    float d0 = dist(in_tri.a);
-    float d1 = dist(in_tri.b);
-    float d2 = dist(in_tri.c);
+    float d0 = DistanceFromPointToPlane(in_tri.a, plane);
+    float d1 = DistanceFromPointToPlane(in_tri.b, plane);
+    float d2 = DistanceFromPointToPlane(in_tri.c, plane);
+
+    float da = DistanceFromPointToPlane(in_tri.a, plane);
+    float db = DistanceFromPointToPlane(in_tri.b, plane);
+    float dc = DistanceFromPointToPlane(in_tri.c, plane);
+
+    if (da > 0.0f && db > 0.0f && dc > 0.0f) {
+        out_tri1 = in_tri;
+        return 1;
+    }
+    if (da < 0.0f && db < 0.0f && dc < 0.0f) {
+        return 0;
+    }
+
+    if (da > 0.0f) {
+        
+        //first point is a.
+
+        if (db > 0.0f) {
+
+            // second point is b
+
+            // c is divided into two points d and e which are interpolated from a and b to c respectively.
+            Point d;
+            LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.a.position) / glm::length(in_tri.c.position - in_tri.a.position);
+            d.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.c.texCoord, ld);
+
+
+            Point e;
+            LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.b.position) / glm::length(in_tri.c.position - in_tri.b.position);
+            e.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.c.texCoord, ld);
+
+            // make two triangles := { a, b, d} & {d, b, e}
+            out_tri1.a = in_tri.a;
+            out_tri1.b = in_tri.b;
+            out_tri1.c = d;
+                
+            out_tri2.a = d;
+            out_tri2.b = in_tri.b;
+            out_tri2.c = e;
+
+            return 2; // Since we are making 2 triangles.
+        }
+        if (dc > 0.0f) {
+
+            // second point is C
+
+            // b is divided into two points d and e which are interpolated from a and c to b respectively.
+            Point d;
+            LinePlaneIntersection(in_tri.a.position, in_tri.b.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.a.position) / glm::length(in_tri.b.position - in_tri.a.position);
+            d.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.b.texCoord, ld);
+
+            Point e;
+            LinePlaneIntersection(in_tri.c.position, in_tri.b.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.c.position) / glm::length(in_tri.b.position - in_tri.c.position);
+            e.texCoord = LerpVector2(in_tri.c.texCoord, in_tri.b.texCoord, le);
+
+            // make two triangles := {a, c, d} & {d, c, e}
+            out_tri1.a = in_tri.a;
+            out_tri1.b = in_tri.c;
+            out_tri1.c = d;
+
+            out_tri2.a = d;
+            out_tri2.b = in_tri.c;
+            out_tri2.c = e;
+
+            return 2; // Since we are making 2 triangles.
+        }
+        if (db < 0.0f && dc < 0.0f) {
+
+            // second and third points are interpolated between b and c to a.
+            Point d;
+            LinePlaneIntersection(in_tri.a.position, in_tri.b.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.a.position) / glm::length(in_tri.b.position - in_tri.a.position);
+            d.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.b.texCoord, ld);
+
+            Point e;
+            LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.a.position) / glm::length(in_tri.c.position - in_tri.a.position);
+            e.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.c.texCoord, ld);
+
+            // make one triangle := {a, d, e}
+            out_tri1.a = in_tri.a;
+            out_tri1.b = d;
+            out_tri1.c = e;
+
+            return 1; // Since we are making 1 triangles.
+
+        }
+
+    }
+    if (db > 0.0f) {
+
+        if (dc > 0.0f) {
+
+            // second point is c
+
+            // a is divided into two points d and e which are interpolated from b and c to a respectively.
+            Point d;
+            LinePlaneIntersection(in_tri.b.position, in_tri.a.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.b.position) / glm::length(in_tri.a.position - in_tri.b.position);
+            d.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.a.texCoord, ld);
+
+
+            Point e;
+            LinePlaneIntersection(in_tri.c.position, in_tri.a.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.c.position) / glm::length(in_tri.a.position - in_tri.c.position);
+            e.texCoord = LerpVector2(in_tri.c.texCoord, in_tri.a.texCoord, le);
+
+            // make two triangles := {b, c, d} & {d, c, e}
+            out_tri1.a = in_tri.b;
+            out_tri1.b = in_tri.c;
+            out_tri1.c = d;
+
+            out_tri2.a = d;
+            out_tri2.b = in_tri.c;
+            out_tri2.c = e;
+
+            return 2; // Since we are making 2 triangles.
+        }
+        if (dc < 0.0f && da < 0.0f) {
+
+            // second and third points are interpolated between c and a to b.
+            Point d;
+            LinePlaneIntersection(in_tri.c.position, in_tri.b.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.c.position) / glm::length(in_tri.b.position - in_tri.c.position);
+            d.texCoord = LerpVector2(in_tri.c.texCoord, in_tri.b.texCoord, ld);
+
+            Point e;
+            LinePlaneIntersection(in_tri.a.position, in_tri.b.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.a.position) / glm::length(in_tri.b.position - in_tri.a.position);
+            e.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.b.texCoord, le);
+
+            // make two triangles := {b, d, e}
+            out_tri1.a = in_tri.b;
+            out_tri1.b = d;
+            out_tri1.c = e;
+
+            return 1; // Since we are making 1 triangles.
+        }
+    }
+    if (dc > 0.0f) {
+        if (db < 0.0f && da < 0.0f) {
+
+            // second and third points are interpolated between b and a to c.
+            Point d;
+            LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, d.position);
+            float ld = glm::length(d.position - in_tri.a.position) / glm::length(in_tri.c.position - in_tri.a.position);
+            d.texCoord = LerpVector2(in_tri.a.texCoord, in_tri.c.texCoord, ld);
+
+            Point e;
+            LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
+            float le = glm::length(e.position - in_tri.b.position) / glm::length(in_tri.c.position - in_tri.b.position);
+            e.texCoord = LerpVector2(in_tri.b.texCoord, in_tri.c.texCoord, le);
+
+            // make two triangles := {c, d, e}
+            out_tri1.a = in_tri.c;
+            out_tri1.b = d;
+            out_tri1.c = e;
+
+            return 1;
+        }
+    }
 
     if (d0 >= 0) { inside_points[nInsidePointCount++] = &in_tri.a; }
     else { outside_points[nOutsidePointCount++] = &in_tri.a; }
@@ -1186,6 +1558,9 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
     else { outside_points[nOutsidePointCount++] = &in_tri.b; }
     if (d2 >= 0) { inside_points[nInsidePointCount++] = &in_tri.c; }
     else { outside_points[nOutsidePointCount++] = &in_tri.c; }
+
+    Vector2 yellow = { 1.0f, 1.0f };
+    Vector2 black = { 0.0f, 0.0f };
 
     // Now classify triangle points, and break the input triangle into 
     // smaller output triangles if required. There are four possible
@@ -1246,19 +1621,28 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
 
         // The inside point is valid, so keep that...
         out_tri1.a = *inside_points[0];
+        //out_tri1.b.texCoord = inside_points[0]->texCoord;
 
         // but the two new points are at the locations where the 
         // original sides of the triangle (lines) intersect with the plane
-        out_tri1.b.position = VectorIntersectPlane({*inside_points[0], *outside_points[0]}, plane);
-        out_tri1.b.texCoord = outside_points[0]->texCoord;
-        out_tri1.c.position = VectorIntersectPlane({*inside_points[0], *outside_points[1]}, plane);
-        out_tri1.c.texCoord = outside_points[1]->texCoord;
 
-        //std::cout << in_tri.a.texCoord.x << ", " << in_tri.a.texCoord.y << ", " << in_tri.b.texCoord.x << ", " << in_tri.b.texCoord.y << ", " << in_tri.c.texCoord.x << ", " << in_tri.c.texCoord.y << ", " << std::endl;
+        //float t = 0;
+        //out_tri1.b.position = VectorIntersectPlane({out_tri1.a, *outside_points[0]}, plane, t);
+        LinePlaneIntersection(out_tri1.a.position, outside_points[0]->position, plane, out_tri1.b.position);
+        float pT = glm::length(out_tri1.b.position - out_tri1.a.position) / glm::length(outside_points[0]->position - out_tri1.a.position);
+        out_tri1.b.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, pT);
+        //out_tri1.b.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, 1.0f - pT);
 
-        //std::cout << "Generated 1 tri : " << std::endl;
-        //std::cout << "\t tri1 a := " << out_tri1.a.texCoord.x << ", " << out_tri1.a.texCoord.y << ", b := " << out_tri1.b.texCoord.x << ", " << out_tri1.b.texCoord.y << ", c := " << out_tri1.c.texCoord.x << ", " << out_tri1.c.texCoord.y << ", " << std::endl;
 
+        //out_tri1.c.position = VectorIntersectPlane({ out_tri1.a, *outside_points[1]}, plane, t);
+        LinePlaneIntersection(out_tri1.a.position, outside_points[1]->position, plane, out_tri1.c.position);
+        pT = glm::length(out_tri1.c.position - out_tri1.a.position) / glm::length(outside_points[1]->position - out_tri1.a.position);
+        out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, pT);
+        //out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, 1.0f - pT);
+
+        //pX = glm::length(out_tri1.c.position - out_tri1.a.position) / glm::length(outside_points[1]->position - out_tri1.a.position);
+        //out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[1]->texCoord, pX);
+        //out_tri1.c.texCoord = yellow;
 
         return 1; // Return the newly formed single triangle
     }
@@ -1282,16 +1666,26 @@ int TriangleClipAgainstPlane(Plane& plane, Triangle& in_tri, Triangle& out_tri1,
         // intersects with the plane
         out_tri1.a = *inside_points[0];
         out_tri1.b = *inside_points[1];
-        out_tri1.c.position = VectorIntersectPlane({ *inside_points[0], *outside_points[0] }, plane);
-        out_tri1.c.texCoord = outside_points[0]->texCoord;
+
+        float t = 0;
+        out_tri1.c.position = VectorIntersectPlane({ *inside_points[0], *outside_points[0] }, plane, t);
+        out_tri1.c.texCoord = LerpVector2(inside_points[0]->texCoord, outside_points[0]->texCoord, t);
+        //out_tri1.c.texCoord = t * (outside_points[0]->texCoord - inside_points[0]->texCoord) + inside_points[0]->texCoord;
+        //out_tri1.c.texCoord = outside_points[0]->texCoord;
+        //out_tri1.c.texCoord = black;
+        //out_tri1.c.texCoord = LerpVector2(yellow, black, t);
 
         // The second triangle is composed of one of he inside points, a
         // new point determined by the intersection of the other side of the 
         // triangle and the plane, and the newly created point above
 
         out_tri2.a = *inside_points[1];
-        out_tri2.b.position = VectorIntersectPlane({ *inside_points[1], *outside_points[0] }, plane);
-        out_tri2.b.texCoord = outside_points[0]->texCoord;
+        out_tri2.b.position = VectorIntersectPlane({ *inside_points[1], *outside_points[0] }, plane, t);
+        out_tri1.b.texCoord = LerpVector2(inside_points[1]->texCoord, outside_points[0]->texCoord, t);
+        //out_tri1.b.texCoord = t * (outside_points[0]->texCoord - inside_points[1]->texCoord) + inside_points[1]->texCoord;
+        //out_tri1.b.texCoord = yellow;
+        //out_tri1.b.texCoord = outside_points[0]->texCoord;
+        //out_tri1.b.texCoord = LerpVector2(yellow, black, t);
         out_tri2.c = out_tri1.c;
 
         //std::cout << "Generated 2 tris : " << std::endl;
@@ -1316,7 +1710,7 @@ Plane planeTop      = { { 0.0f, -1.0f, 0.0f }, {{ 0.0f, 1.0f + bias, 0.0f }} };
 Plane planeLeft     = { { 1.0f, 0.0f, 0.0f }, {{ -(1.0f + bias), 0.0f, 0.0f }} };
 Plane planeRight    = { { -1.0f, 0.0f, 0.0f }, {{ 1.0f + bias, 0.0f, 0.0f } } };
 
-Plane planeBottomScreenSpace    = { {0.0f, 1.0f, 0.0f }, {{ 0.0f, 0.0f , 0.0f }} };             // SCREEN SPACE!!!!!!
+Plane planeBottomScreenSpace    = { {0.0f, 1.0f, 0.0f }, {{ 0.0f, 0.0f, 0.0f }} };             // SCREEN SPACE!!!!!!
 Plane planeTopScreenSpace       = { { 0.0f, -1.0f, 0.0f }, {{ 0.0f, screenHeight - 1, 0.0f }} };
 Plane planeLeftScreenSpace      = { { 1.0f, 0.0f, 0.0f }, {{ 0.0f, 0.0f, 0.0f }} };
 Plane planeRightScreenSpace     = { { -1.0f, 0.0f, 0.0f }, {{ screenWidth - 1, 0.0f, 0.0f } } };
@@ -1381,7 +1775,12 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             projectedPointC = projectedPointC / projectedPointC.w;
 
             // Get depth for Z-Buffer
-            Vector3 depth = Vector3{ projectedPointA.z, projectedPointB.z, projectedPointC.z };
+            Vector3 invDepth = Vector3{ 1.0f / projectedPointA.z, 1.0f / projectedPointB.z, 1.0f / projectedPointC.z };
+            Vector3 invW = Vector3{ 1.0f / projectedPointA.w, 1.0f / projectedPointB.w, 1.0f / projectedPointC.w };
+
+            clipped[n].a.texCoord *= invW.x;
+            clipped[n].b.texCoord *= invW.y;
+            clipped[n].c.texCoord *= invW.z;
 
             //Transform into Screen Space
             projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
@@ -1392,7 +1791,8 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
             projectedPointB.x *= (0.5 * imageWidth); projectedPointB.y *= (0.5 * imageHeight);
             projectedPointC.x *= (0.5 * imageWidth); projectedPointC.y *= (0.5 * imageHeight);
 
-            Triangle curLargeScreenSpaceTriangle = { {projectedPointA, clipped[n].a.texCoord}, {projectedPointB, clipped[n].b.texCoord}, {projectedPointC, clipped[n].c.texCoord}, clipped[n].colour };
+            //Triangle curLargeScreenSpaceTriangle = { {projectedPointA, clipped[n].a.texCoord * invW.x }, {projectedPointB, clipped[n].b.texCoord * invW.y }, {projectedPointC, clipped[n].c.texCoord * invW.z}, clipped[n].colour};
+            Triangle curLargeScreenSpaceTriangle = { {projectedPointA, clipped[n].a.texCoord }, {projectedPointB, clipped[n].b.texCoord }, {projectedPointC, clipped[n].c.texCoord }, clipped[n].colour};
 
             std::queue<Triangle> listOfTrianglesToBeCheckeddForClippingAndRendered;
 
@@ -1445,7 +1845,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
                 //std::cout << "Drawing something? " << std::endl;
                 Triangle curTriangle = listOfTrianglesToBeCheckeddForClippingAndRendered.front();
                 listOfTrianglesToBeCheckeddForClippingAndRendered.pop();
-                DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, depth, lineThickness);
+                //std::cout << "READING MESH TEXTURE INDEX 1 : " << currentTextureIndex << std::endl;
+                //DrawTriangleOnScreenFromScreenSpace(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, invDepth, lineThickness);
+                DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curTriangle, normal, invDepth, invW, lineThickness);
                 //DrawTriangleScreenSpaceScanLine(imageData, imageDepthData, imageWidth, curTriangle, normal, depth, lineThickness);
                 //std::cout << "Finished drawing." << std::endl;
             }
@@ -1488,6 +1890,7 @@ void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageDat
 
     for (int i = 0; i < currentMesh.triangles.size(); i++)
     {
+        //std::cout << "READING MESH TEXTURE INDEX 0 : " << currentMesh.textureIndex << std::endl;
         DrawTriangleOnScreenFromWorldTriangleWithClipping(imageData, imageDepthData, imageWidth, imageHeight, i, currentMesh.textureIndex, currentMesh.triangles[i], modelMatrix, cameraPosition, cameraDirection, viewMatrix, projectionMatrix, lineThickness, lineColour, debugDraw);
     }
 }

@@ -35,6 +35,7 @@ void LoadMaterialTextures(std::vector<Texture>& textures, aiMaterial* mat, aiTex
 
         //LoadTextureFromFile(str.C_Str(), curTexture);
         meshToLoadTexturesTo.textureIndex = textures.size();
+        //std::cout << "LOADED := " << meshToLoadTexturesTo.textureIndex << ", " << textures.size() << std::endl;
         textures.push_back(curTexture);
         //std::cout << "texture data size outside := " << textures[textures.size() - 1].data.size() << std::endl;
 

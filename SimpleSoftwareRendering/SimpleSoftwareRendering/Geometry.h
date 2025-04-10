@@ -84,6 +84,12 @@ public:
 	Point pointOnPlane;
 };
 
+float EdgeFunction(const Vector3& a, const Vector3& b, const Vector3& c)
+{
+	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+	//return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
+}
+
 bool LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& planeToCheckAgainst, Point& intersectionPoint, float intersectionDistance)
 {
 	Vector3 vectorAlongLineSegment = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
@@ -96,21 +102,32 @@ bool LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& p
 	return intersectionDistance >= 0 && intersectionDistance <= 1;
 }
 
-Vector3 LinePlaneIntersection(const LineSegment& lineSegmentToCheck, const Plane& planeToCheckAgainst)
+bool LinePlaneIntersection(const Vector3& a, const Vector3& b, const Plane& planeToCheckAgainst, Vector3& intersectionPoint)
 {
-	Vector3 vectorAlongLineSegment = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
-	Vector3 vectorFromLineSegmentToPlane = planeToCheckAgainst.pointOnPlane.position - lineSegmentToCheck.a.position;
+	// if a line is described in its parametric form L(t) = a + t * (b - a) and a plane as n . (x - p) = 0
+	// then t = (n . (p - a)) / (n . (b - a))
+	// if n . (b - a) = 0 line is parallel
+	// if t is not in range [0, 1] the line and plane intersect but not withint the range of its start and end points.
 
-	float intersectionDistance = glm::dot(vectorFromLineSegmentToPlane, planeToCheckAgainst.normal) / glm::dot(vectorAlongLineSegment, planeToCheckAgainst.normal);
+	Vector3 lineSegment = b - a;
+	float denominator = glm::dot(planeToCheckAgainst.normal, lineSegment);
 
-	Vector3 intersectionPoint = { lineSegmentToCheck.a.position * intersectionDistance };
+	if (denominator != 0) {
+		Vector3 vectorFromLineSegmentToPlane = planeToCheckAgainst.pointOnPlane.position - a;
+		float numerator = glm::dot(planeToCheckAgainst.normal, vectorFromLineSegmentToPlane);
 
-	if (intersectionDistance >= 0 && intersectionDistance <= 1) {
-		return intersectionPoint;
+		float t = numerator / denominator;
+		intersectionPoint = a + t * (lineSegment);
+
+		return true;
 	}
 	else {
-		return Vector3(0.0f);
+		return false;
 	}
+}
+
+float DistanceFromPointToPlane(const Point& point, const Plane& plane) {
+	return glm::dot(plane.normal, point.position - plane.pointOnPlane.position);
 }
 
 Vector3 VectorIntersectPlane(const LineSegment& lineSegmentToCheck, Plane& plane)
@@ -123,6 +140,21 @@ Vector3 VectorIntersectPlane(const LineSegment& lineSegmentToCheck, Plane& plane
 	float t = (-plane_d - ad) / (bd - ad);
 	Vector3 lineStartToEnd = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
 	Vector3 lineToIntersect = lineStartToEnd * t;
+	return lineSegmentToCheck.a.position + lineToIntersect;
+}
+
+Vector3 VectorIntersectPlane(const LineSegment& lineSegmentToCheck, Plane& plane, float& outPercecntage)
+{
+	plane.normal = glm::normalize(plane.normal);
+
+	float plane_d = -glm::dot(plane.normal, plane.pointOnPlane.position);
+	float ad = glm::dot(lineSegmentToCheck.a.position, plane.normal);
+	float bd = glm::dot(lineSegmentToCheck.b.position, plane.normal);
+	float t = (-plane_d - ad) / (bd - ad);
+	Vector3 lineStartToEnd = lineSegmentToCheck.b.position - lineSegmentToCheck.a.position;
+	Vector3 lineToIntersect = lineStartToEnd * t;
+
+	outPercecntage = t;
 	return lineSegmentToCheck.a.position + lineToIntersect;
 }
 

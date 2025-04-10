@@ -25,13 +25,18 @@ int texCoordDebugPrintCounter = 0;
 
 Colour GetColourFromTexCoord(Texture& texture, Vector2 texCoord) {
 
-	if (texCoord.x >= 0.0f && texCoord.x <= 1.0f && texCoord.y >= 0.0f && texCoord.y <= 1.0f) {
+	if (texCoord.x >= 0.0f && texCoord.x < 1.0f && texCoord.y >= 0.0f && texCoord.y < 1.0f) {
 
 		Colour returnColour = Colours::pink;
 
 		//std::cout << "Tex coord := " << texCoord.x << ", " << texCoord.y << std::endl;
-		Vector2Int magnifiedTexCoord = Vector2{ (texCoord.x * (float)texture.width), (texCoord.y * (float)texture.height) };
+		Vector2Int magnifiedTexCoord = Vector2{ (texCoord.x * (float)(texture.width - 1)), (texCoord.y * (float)(texture.height - 1)) };
 		
+		magnifiedTexCoord.x = magnifiedTexCoord.x > texture.width - 1 ? texture.width - 1 : magnifiedTexCoord.x;
+		magnifiedTexCoord.x = magnifiedTexCoord.x < 0 ? 0 : magnifiedTexCoord.x;
+
+		magnifiedTexCoord.y = magnifiedTexCoord.y > texture.height - 1 ? texture.height - 1 : magnifiedTexCoord.y;
+		magnifiedTexCoord.y = magnifiedTexCoord.y < 0 ? 0 : magnifiedTexCoord.y;
 		//std::cout << texCoord.x << ", " << texCoord.y << " | " << magnifiedTexCoord.x << ", " << magnifiedTexCoord.y << std::endl;
 
 
