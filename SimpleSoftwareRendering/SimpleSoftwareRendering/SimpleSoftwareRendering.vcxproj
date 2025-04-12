@@ -140,6 +140,7 @@
   <ItemGroup>
     <ClInclude Include="CameraUtils.h" />
     <ClInclude Include="Colour.h" />
+    <ClInclude Include="DebugUtilities.h" />
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Instrumentor.h" />

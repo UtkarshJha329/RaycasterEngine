@@ -115,6 +115,8 @@ std::string testCubeTexturedFileName = "TestCubeTextured.obj";
 std::string truckTexturedFileName = "Truck/Truck.obj";
 std::string utahTeapotTexturedFileName = "UtahTeapot/UtahTeapot.obj";
 std::string planeTexturedFileName = "TexturedPlane/TexturedPlane.obj";
+std::string colouredCubeFileName = "ColouredCube/ColouredCube.obj";
+std::string colouredAndTexturedCubeFileName = "ColouredAndTexturedCube/ColouredAndTexturedCube.obj";
 
 bool freezeRotation = true;
 
@@ -297,7 +299,9 @@ int main()
     //LoadModel(modelsPath + testUtahTeaPotFileName, testCubeModel);
     //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
-    LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + colouredCubeFileName, testCubeModel);
+    LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
     //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
 

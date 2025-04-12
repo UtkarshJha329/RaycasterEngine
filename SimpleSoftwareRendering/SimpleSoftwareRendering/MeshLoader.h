@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "DebugUtilities.h"
+
 #include "WorldConstants.h"
 #include "Model.h"
 
@@ -17,7 +19,6 @@ std::vector<std::string> SplitString(const std::string& str, char delimiter) {
     }
     return tokens;
 }
-
 
 // checks all material textures of a given type and loads the textures if they're not loaded yet.
 // the required info is returned as a Texture struct.
@@ -76,6 +77,24 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
         else {
             std::cout << "No texture coordinates." << std::endl;
             curPoint.texCoord = Vector3(0.0f, 0.0f, 0.0f);
+        }
+
+        if (mesh->HasVertexColors(0)) {
+            Vector4 colour;
+            colour.x = mesh->mColors[0][i].r * 255.0f;
+            colour.y = mesh->mColors[0][i].g * 255.0f;
+            colour.z = mesh->mColors[0][i].b * 255.0f;
+            colour.w = mesh->mColors[0][i].a * 255.0f;
+
+
+            //curPoint.colour = { (unsigned char)colour.r, (unsigned char)colour.g, (unsigned char)colour.b, (unsigned char)colour.a };
+            curPoint.colour = { colour.x, colour.y, colour.z, colour.w };
+            //PrintColour(curPoint.colour);
+        }
+        else {
+            
+            std::cout << "No vertex colours." << std::endl;
+            curPoint.colour = { 0, 0, 0, 255 };
         }
 
         points.push_back(curPoint);

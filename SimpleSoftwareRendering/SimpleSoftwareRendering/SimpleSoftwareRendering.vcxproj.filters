@@ -59,5 +59,8 @@
     <ClInclude Include="WorldConstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DebugUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

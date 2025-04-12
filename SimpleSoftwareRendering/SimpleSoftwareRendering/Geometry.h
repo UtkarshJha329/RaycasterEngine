@@ -44,7 +44,8 @@ class Point {
 public:
 	Vector3 position;
 	Vector3 texCoord;
-	Colour colour;
+	//Colour colour;
+	Vector4 colour;
 };
 
 class LineSegment {
