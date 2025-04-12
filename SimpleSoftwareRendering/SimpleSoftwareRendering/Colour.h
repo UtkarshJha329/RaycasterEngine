@@ -10,17 +10,3 @@ public:
     unsigned char b;
     unsigned char a;
 };
-
-class Colours {
-
-public:
-
-    static Colour white;
-    static Colour black;
-    static Colour red;
-    static Colour green;
-    static Colour blue;
-    static Colour yellow;
-    static Colour pink;
-
-};

@@ -6,7 +6,8 @@
 #include <vector>
 
 #include "stb_image.h"
-#include "Colour.h"
+
+#include "WorldConstants.h"
 
 class Texture {
 
@@ -27,7 +28,7 @@ Colour GetColourFromTexCoord(Texture& texture, Vector2 texCoord) {
 
 	if (texCoord.x >= 0.0f && texCoord.x < 1.0f && texCoord.y >= 0.0f && texCoord.y < 1.0f) {
 
-		Colour returnColour = Colours::pink;
+		Colour returnColour = colour_pink;
 
 		//std::cout << "Tex coord := " << texCoord.x << ", " << texCoord.y << std::endl;
 		Vector2Int magnifiedTexCoord = Vector2{ (texCoord.x * (float)(texture.width - 1)), (texCoord.y * (float)(texture.height - 1)) };
@@ -58,7 +59,7 @@ Colour GetColourFromTexCoord(Texture& texture, Vector2 texCoord) {
 		return returnColour;
 	}
 	else {
-		return Colours::black;
+		return colour_black;
 	}
 
 

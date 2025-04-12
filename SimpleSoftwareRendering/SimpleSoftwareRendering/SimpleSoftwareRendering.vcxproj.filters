@@ -24,9 +24,6 @@
     <ClCompile Include="std_image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Colour.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Instrumentor.h">
@@ -57,6 +54,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldConstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

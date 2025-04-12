@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "Geometry.h"
+#include "WorldConstants.h"
 #include "Model.h"
 
 std::vector<std::string> SplitString(const std::string& str, char delimiter) {
@@ -88,7 +88,7 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
         aiFace face = mesh->mFaces[i];
         // retrieve all indices of the face and store them in the indices vector
         if (face.mNumIndices == 3) {
-            Triangle curTriangle = { points[face.mIndices[0]], points[face.mIndices[1]], points[face.mIndices[2]], Colours::white };
+            Triangle curTriangle = { points[face.mIndices[0]], points[face.mIndices[1]], points[face.mIndices[2]], colour_white };
 
             //PrintThisTriangleInfo(curTriangle, i);
 

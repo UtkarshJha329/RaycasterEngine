@@ -114,6 +114,7 @@ std::string testUtahTeaPotFileName = "UtahTeapot.obj";
 std::string testCubeTexturedFileName = "TestCubeTextured.obj";
 std::string truckTexturedFileName = "Truck/Truck.obj";
 std::string utahTeapotTexturedFileName = "UtahTeapot/UtahTeapot.obj";
+std::string planeTexturedFileName = "TexturedPlane/TexturedPlane.obj";
 
 bool freezeRotation = true;
 
@@ -297,6 +298,7 @@ int main()
     //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
     LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
 
     //for (int i = 0; i < Model::textures.size(); i++)
@@ -404,34 +406,39 @@ int main()
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
 
-        Mat4x4 modelMat = glm::identity<Mat4x4>();
-        modelMat = glm::translate(modelMat, objectPosition);
-        modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
-        modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
-
-
-        Mat4x4 cameraTransformMatrix    = glm::identity<Mat4x4>();
-        cameraTransformMatrix           = glm::translate(cameraTransformMatrix, cameraPosition);
-
-        Mat4x4 cameraRotationMatrix     = glm::identity<Mat4x4>();
-        cameraRotationMatrix            = glm::rotate(cameraRotationMatrix, cameraXRot, cameraRightDirection);
-        cameraRotationMatrix            = glm::rotate(cameraRotationMatrix, cameraYRot, worldUP);
-
-        cameraTransformMatrix           =  cameraTransformMatrix * cameraRotationMatrix;
-
-        cameraTransformMatrix           = glm::scale(cameraTransformMatrix, { 1.0f, 1.0f, 1.0f });
-
-        cameraViewMatrix = glm::inverse(cameraTransformMatrix);
-
-        cameraLookingDirection = Vector3{ cameraRotationMatrix * Vector4{0.0f, 0.0f, 1.0f, 1.0f } };
-        cameraRightDirection = glm::cross({ 0.0f, 1.0f, 0.0f }, cameraLookingDirection);
-
-
-        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, randomMesh, modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
-        //DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[0], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
-        for (int i = 0; i < testCubeModel.meshes.size(); i++)
         {
-            DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+            //PROFILE_SCOPE("MODEL, VIEW AND PROJECTION MATRIX CREATION");
+
+            Mat4x4 modelMat = glm::identity<Mat4x4>();
+            modelMat = glm::translate(modelMat, objectPosition);
+            modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
+            modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
+
+
+            Mat4x4 cameraTransformMatrix = glm::identity<Mat4x4>();
+            cameraTransformMatrix = glm::translate(cameraTransformMatrix, cameraPosition);
+
+            Mat4x4 cameraRotationMatrix = glm::identity<Mat4x4>();
+            cameraRotationMatrix = glm::rotate(cameraRotationMatrix, cameraXRot, cameraRightDirection);
+            cameraRotationMatrix = glm::rotate(cameraRotationMatrix, cameraYRot, worldUP);
+
+            cameraTransformMatrix = cameraTransformMatrix * cameraRotationMatrix;
+
+            cameraTransformMatrix = glm::scale(cameraTransformMatrix, { 1.0f, 1.0f, 1.0f });
+
+            cameraViewMatrix = glm::inverse(cameraTransformMatrix);
+
+            cameraLookingDirection = Vector3{ cameraRotationMatrix * Vector4{0.0f, 0.0f, 1.0f, 1.0f } };
+            cameraRightDirection = glm::cross({ 0.0f, 1.0f, 0.0f }, cameraLookingDirection);
+
+
+            {
+                //PROFILE_SCOPE("RENDERING");
+                for (int i = 0; i < testCubeModel.meshes.size(); i++)
+                {
+                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+                }
+            }
         }
 
         glBindTexture(GL_TEXTURE_2D, texture);
