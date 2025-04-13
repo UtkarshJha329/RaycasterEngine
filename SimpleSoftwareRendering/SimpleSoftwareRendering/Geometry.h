@@ -185,45 +185,11 @@ void ApplyTransformToTriangleNormals(Triangle& curTriangle, Mat4x4& transformMat
 	Vector4 normalB = transformMatrix * Vector4(curTriangle.b.normal, 1.0f);
 	Vector4 normalC = transformMatrix * Vector4(curTriangle.c.normal, 1.0f);
 
-	normalA = normalA / normalA.w;
-	normalB = normalB / normalB.w;
-	normalC = normalC / normalC.w;
+	//normalA = normalA / normalA.w;
+	//normalB = normalB / normalB.w;
+	//normalC = normalC / normalC.w;
 
 	curTriangle.a.normal = normalA;
 	curTriangle.b.normal = normalB;
 	curTriangle.c.normal = normalC;
-}
-
-void PrintMat4x4(const Mat4x4& matrixToPrint) {
-
-	for (int x = 0; x < 4; x++)
-	{
-		for (int y = 0; y < 4; y++)
-		{
-			std::cout << matrixToPrint[x][y] << ", ";
-		}
-		std::cout << std::endl;
-	}
-
-	std::cout << std::endl;
-}
-
-void PrintMat4x4Pos0(const Mat4x4& matrixToPrint) {
-
-	for (int x = 0; x < 4; x++)
-	{
-		for (int y = 0; y < 4; y++)
-		{
-			if(x != 3)
-			{
-				std::cout << matrixToPrint[x][y] << ", ";
-			}
-			else {
-				std::cout << 0 << ", ";
-			}
-		}
-		std::cout << std::endl;
-	}
-
-	std::cout << std::endl;
 }

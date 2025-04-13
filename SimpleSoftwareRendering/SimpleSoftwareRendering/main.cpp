@@ -125,6 +125,7 @@ std::string colouredCubeFileName = "ColouredCube/ColouredCube.obj";
 std::string colouredAndTexturedCubeFileName = "ColouredAndTexturedCube/ColouredAndTexturedCube.obj";
 std::string monu2FileName = "Monu2MagicaVoxel/monu2.obj";
 std::string LowPolyForestTerrainFileName = "LowPolyForestTerrain/LowPolyForestTerrain.obj";
+std::string texturedSuzanneFileName = "TexturedSuzanne/TexturedSuzanne.obj";
 
 bool freezeRotation = true;
 
@@ -315,6 +316,7 @@ int main()
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + monu2FileName, testCubeModel);
     LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
+    //LoadModel(modelsPath + texturedSuzanneFileName, testCubeModel);
 
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
@@ -440,10 +442,12 @@ int main()
 
             {
                 //PROFILE_SCOPE("RENDERING");
+                int totalTrianglesRendered = 0;
                 for (int i = 0; i < testCubeModel.meshes.size(); i++)
                 {
-                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red);
+                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, totalTrianglesRendered);
                 }
+                //std::cout << "Total triangles rendered := " << totalTrianglesRendered << std::endl;
             }
         }
 

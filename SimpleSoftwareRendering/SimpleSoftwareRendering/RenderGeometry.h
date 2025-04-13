@@ -106,7 +106,7 @@ void DrawLineSegmentOnScreen(std::vector<unsigned char>& imageData, int imageWid
 
 void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 	const float& x, const float& y,
-	const float& lightDotTriangleNormal,
+	const Vector3& lightDotTriangleNormals,
 	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 	const float& areaOfTriangle,
 	const Vector3& invDepth,
@@ -142,11 +142,8 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 	Vector3 normal = (alpha * curTriangle.a.normal) + (beta * curTriangle.b.normal) + (gamma * curTriangle.c.texCoord);
 	normal *= texW;
 
-	normal = glm::normalize(normal);
-	Vector3 lightDir = { 1.0f, 1.0f, 1.0f };
-	lightDir = glm::normalize(lightDir);
-
-	float normalDotLightDir = glm::dot(normal, lightDir);
+	float lightDotTriangleNormal = (alpha * lightDotTriangleNormals.x) + (beta * lightDotTriangleNormals.y) + (gamma * lightDotTriangleNormals.z);
+	lightDotTriangleNormal *= texW;
 
 	//Vector4 curColour = (alpha * ColourToVector4(curTriangle.a.colour) * invW.x) + (beta * ColourToVector4(curTriangle.b.colour) * invW.y) + (gamma * ColourToVector4(curTriangle.c.colour) * invW.z);
 	Vector4 curColour = (alpha * curTriangle.a.colour) + (beta * curTriangle.b.colour) + (gamma * curTriangle.c.colour);
@@ -167,7 +164,8 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 				//std::cout << "Drawing pixel." << std::endl;
 
 				//Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
-				Colour texelColour = colourTextureMixFactor < 1.0f ? GetColourFromTexCoord(*curTex, texCoord) : colour_black;
+				//Colour texelColour = colourTextureMixFactor < 1.0f ? GetColourFromTexCoord(*curTex, texCoord) : colour_black;
+				Colour texelColour = GetColourFromTexCoord(*curTex, texCoord);
 				float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor * curColour.r));
 				float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor * curColour.g));
 				float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor * curColour.b));
@@ -176,6 +174,10 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 				//g = texCoord.y * 255;
 				//b = 0;
 
+				//imageData[index + 0] = r;
+				//imageData[index + 1] = g;
+				//imageData[index + 2] = b;
+				//imageData[index + 3] = 255;
 
 				imageData[index + 0] = r * lightDotTriangleNormal;
 				imageData[index + 1] = g * lightDotTriangleNormal;
@@ -198,7 +200,7 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 
 void DrawLineSegmentOnScreenWithInterpolatedValues(const float& imageWidth,
 										Vector2 start, Vector2 end,
-										const float& lightDotTriangleNormal,
+										const Vector3& lightDotTriangleNormals,
 										const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 										const float& areaOfTriangle,
 										const Vector3& invDepth,
@@ -245,7 +247,7 @@ void DrawLineSegmentOnScreenWithInterpolatedValues(const float& imageWidth,
 
 			Vector2 curPoint = Vector2{ y, x };
 
-			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
 
 		}
 	}
@@ -258,7 +260,7 @@ void DrawLineSegmentOnScreenWithInterpolatedValues(const float& imageWidth,
 
 			Vector2 curPoint = Vector2{ x, y };
 
-			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
 
 		}
 	}
@@ -330,7 +332,7 @@ bool IsLineTopOrLeft(Vector2Int start, Vector2Int end) {
 
 void DrawCurrentTrianglePixel(const float& imageWidth,
 	const float& x, const float& y,
-	const float& lightDotTriangleNormal,
+	const Vector3& lightDotTriangleNormals,
 	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 	const float& areaOfTriangle,
 	const Vector3& invDepth,
@@ -366,6 +368,13 @@ void DrawCurrentTrianglePixel(const float& imageWidth,
 	Vector3 normal = (alpha * curTriangle.a.normal) + (beta * curTriangle.b.normal) + (gamma * curTriangle.c.texCoord);
 	normal *= texW;
 
+	//std::cout << lightDotTriangleNormals.x << ", " << lightDotTriangleNormals.y << ", " << lightDotTriangleNormals.z << std::endl;
+
+	float lightDotTriangleNormal = (alpha * lightDotTriangleNormals.x) + (beta * lightDotTriangleNormals.y) + (gamma * lightDotTriangleNormals.z);
+	lightDotTriangleNormal *= texW;
+
+	//std::cout << lightDotTriangleNormal << std::endl;
+
 	//std::cout << curTriangle.a.normal.x << ", " << curTriangle.a.normal.y << ", " << curTriangle.a.normal.z << std::endl;
 
 	//std::cout << normal.x << ", " << normal.y << ", " << normal.z << std::endl;
@@ -378,7 +387,7 @@ void DrawCurrentTrianglePixel(const float& imageWidth,
 	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
 	{
 		//std::cout << "Pixel has passed depth test." << std::endl;
-		float cutOffValueFloat = 0.0f;
+		float cutOffValueFloat = 1.0f;
 		if ((crossAFloat >= cutOffValueFloat && crossBFloat >= cutOffValueFloat && crossCFloat >= cutOffValueFloat)
 			|| (crossAFloat <= cutOffValueFloat && crossBFloat <= cutOffValueFloat && crossCFloat <= cutOffValueFloat))
 		{
@@ -391,7 +400,8 @@ void DrawCurrentTrianglePixel(const float& imageWidth,
 				//std::cout << "Drawing pixel." << std::endl;
 
 				//Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
-				Colour texelColour = colourTextureMixFactor < 1.0f ? GetColourFromTexCoord(*curTex, texCoord) : colour_black;
+				//Colour texelColour = colourTextureMixFactor < 1.0f ? GetColourFromTexCoord(*curTex, texCoord) : colour_black;
+				Colour texelColour = GetColourFromTexCoord(*curTex, texCoord);
 				float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor * curColour.r));
 				float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor * curColour.g));
 				float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor * curColour.b));
@@ -399,6 +409,11 @@ void DrawCurrentTrianglePixel(const float& imageWidth,
 				//r = texCoord.x * 255;
 				//g = texCoord.y * 255;
 				//b = 0;
+
+				//imageData[index + 0] = r;
+				//imageData[index + 1] = g;
+				//imageData[index + 2] = b;
+				//imageData[index + 3] = 255;
 
 				imageData[index + 0] = r * lightDotTriangleNormal;
 				imageData[index + 1] = g * lightDotTriangleNormal;
@@ -436,7 +451,7 @@ void DrawCurrentFlatLine(const float& imageWidth,
 	const float& y, const float& yTop,
 	const float& startX, const float& endX,
 	const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
-	const float& lightDotTriangleNormal,
+	const Vector3& lightDotTriangleNormals,
 	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 	const float& areaOfTriangle,
 	const Vector3& invDepth,
@@ -445,24 +460,30 @@ void DrawCurrentFlatLine(const float& imageWidth,
 	const Triangle& triangle,
 	const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
 {
-	float x1 = startX;
-	float x2 = endX;
+	int x1 = startX;
+	int x2 = endX;
 	if (x1 > x2) {
 		std::swap(x1, x2);
 	}
+
+	x1 = floor(x1);
+	x2 = ceil(x2);
 
 	int numPixelsForPadding = 3;
 	////x1 -= numPixelsForPadding;
 	x2 += numPixelsForPadding;
 
 	////x1 = std::max(boundingBoxMin.x, x1);
-	x2 = std::min(boundingBoxMax.x, x2);
+	x2 = std::min((int)round(boundingBoxMax.x), x2);
+
+	//float x1 = boundingBoxMin.x;
+	//float x2 = boundingBoxMax.x;
 
 	//x1 = std::max(x1, 0.0f);
-	for (float x = x1; x <= x2; x++)
+	for (int x = x1; x <= x2; x++)
 	{
 		//std::cout << "Stuck 3 := " <<  x << std::endl;
-		DrawCurrentTrianglePixel(imageWidth, x, y, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
+		DrawCurrentTrianglePixel(imageWidth, x, y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
 		//if (abs(x - x1) <= 2 || abs(x - x2) == 2) {
 		//	DrawCurrentPixel(imageWidth, x, y, deltaY, deltaX, deltaK, biasEdgeFloat, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_black, true, curTex, imageData, imageDepthData);
 		//}
@@ -479,7 +500,7 @@ int printCounter = 0;
 void DrawFlatBottomTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight,
 							const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
 							const Vector3& d,
-							const float& lightDotTriangleNormal,
+							const Vector3& lightDotTriangleNormals,
 							const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 							const float& areaOfTriangle,
 							const Vector3& invDepth,
@@ -497,30 +518,29 @@ void DrawFlatBottomTriangle(std::vector<unsigned char>& imageData, std::vector<f
 
 	float slope2DeltaX = d.x - triangle.c.position.x;
 	float slope2DeltaY = triangle.b.position.y - triangle.c.position.y;
-	bool slope2Steep = abs(slope2DeltaX) < abs(slope2DeltaY);
 
 	float slope1Top = (slope1DeltaX) / (slope1DeltaY);
 	float slope2Top = (slope2DeltaX) / (slope2DeltaY);
 
 	for (int y = triangle.c.position.y; y <= triangle.b.position.y; y++)
 	{
-		DrawCurrentFlatLine(imageWidth, y, triangle.c.position.y, startScanLineXTop, endScanLineXTop, boundingBoxMin, boundingBoxMax, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_blue, triangle, curTex, imageData, imageDepthData);
+		DrawCurrentFlatLine(imageWidth, y, triangle.c.position.y, startScanLineXTop, endScanLineXTop, boundingBoxMin, boundingBoxMax, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_blue, triangle, curTex, imageData, imageDepthData);
 		//DrawCurrentFlatLine(imageWidth, y, triangle.c.position.y, boundingBoxMin.x, boundingBoxMax.x, boundingBoxMin, boundingBoxMax, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_blue, triangle, curTex, imageData, imageDepthData);
 
 		startScanLineXTop += (slope1Top);
 		endScanLineXTop += (slope2Top);
 	}
 
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.c.position, triangle.b.position, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, d, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.c.position, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.c.position, triangle.b.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.c.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
 
 }
 
 void DrawFlatTopTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight,
 	const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
 	const Vector3& d,
-	const float& lightDotTriangleNormal,
+	const Vector3& lightDotTriangleNormals,
 	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 	const float& areaOfTriangle,
 	const Vector3& invDepth,
@@ -539,23 +559,23 @@ void DrawFlatTopTriangle(std::vector<unsigned char>& imageData, std::vector<floa
 
 	for (int y = triangle.a.position.y; y >= triangle.b.position.y; y--)
 	{
-		DrawCurrentFlatLine(imageWidth, y, triangle.b.position.y, startScanLineXBottom, endScanLineXBottom, boundingBoxMin, boundingBoxMax, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_red, triangle, curTex, imageData, imageDepthData);
+		DrawCurrentFlatLine(imageWidth, y, triangle.b.position.y, startScanLineXBottom, endScanLineXBottom, boundingBoxMin, boundingBoxMax, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_red, triangle, curTex, imageData, imageDepthData);
 		//DrawCurrentFlatLine(imageWidth, y, triangle.b.position.y, boundingBoxMin.x, boundingBoxMax.x, boundingBoxMin, boundingBoxMax, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_red, triangle, curTex, imageData, imageDepthData);
 
 		startScanLineXBottom -= (slope1Bottom);
 		endScanLineXBottom -= (slope2Bottom);
 	}
 
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, triangle.a.position, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.a.position, d, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.b.position, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, triangle.a.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.a.position, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
+	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.b.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
 
 }
 
 void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData,
 	int imageWidth, int imageHeight,
 	int curTriangleIndex, int currentTextureIndex,
-	const Triangle& drawTriangle, const float& lightDotTriangleNormal,
+	const Triangle& drawTriangle, const Vector3& lightDotTriangleNormals,
 	Vector3 invDepth, Vector3 invW,
 	int lineThickness)
 {
@@ -621,12 +641,33 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 	boundingBoxMin = Vector2{ std::min(boundingBoxMin.x, triangle.c.position.x), std::min(boundingBoxMin.y, triangle.c.position.y) };
 	boundingBoxMax = Vector2{ std::max(boundingBoxMax.x, triangle.c.position.x), std::max(boundingBoxMax.y, triangle.c.position.y) };
 
+
+	//if (ceil(triangle.a.position.y) == ceil(triangle.b.position.y) && (ceil(triangle.a.position.x) != ceil(triangle.b.position.x))) {
+	//	Vector3 d = triangle.a.position;
+	//	d.z = 0.0f;
+	//	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	//}
+	//else if(ceil(triangle.c.position.y) == ceil(triangle.b.position.y) && (ceil(triangle.c.position.x) != ceil(triangle.b.position.x))) {
+	//	Vector3 d = triangle.c.position;
+	//	d.z = 0.0f;
+	//	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	//}
+	//else {
+
+	//	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
+	//	Vector3 d = { x4, triangle.b.position.y, 0.0f };
+
+
+	//	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	//	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	//}
+
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
-	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
 
-	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormal, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
+	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
 
 	//if (printRateCounter % printRate == 0) {
 	//    //std::cout << printString << std::endl;
@@ -642,7 +683,7 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 }
 
 
-int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::vector<Triangle>& outputTriangles, bool test = false)
+int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, bool test = false)
 {
 	PROFILE_FUNCTION();
 
@@ -652,6 +693,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 
 	if (da > 0.0f && db > 0.0f && dc > 0.0f) {
 		outputTriangles.push_back(in_tri);
+		outLightDotNormal.push_back(inLightDotNormal);
 		return 1;
 	}
 	if (da < 0.0f && db < 0.0f && dc < 0.0f) {
@@ -673,6 +715,8 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.texCoord = LerpVector3(in_tri.a.texCoord, in_tri.c.texCoord, ld);
 			d.colour = LerpVector4(in_tri.a.colour, in_tri.c.colour, ld);
 			d.normal = LerpVector3(in_tri.a.normal, in_tri.c.normal, ld);
+			
+			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
@@ -681,16 +725,20 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = LerpVector4((in_tri.b.colour), (in_tri.c.colour), le);
 			e.normal = LerpVector3((in_tri.b.normal), (in_tri.c.normal), le);
 
+			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
+
 			// make two triangles := { a, b, d} & {d, b, e}
 			Triangle clippedTriangleABD;
 			clippedTriangleABD.a = in_tri.a;
 			clippedTriangleABD.b = in_tri.b;
 			clippedTriangleABD.c = d;
+			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.y, dLightNormal });
 
 			Triangle clippedTriangleDBE;
 			clippedTriangleDBE.a = d;
 			clippedTriangleDBE.b = in_tri.b;
 			clippedTriangleDBE.c = e;
+			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.y, eLightNormal });
 
 			outputTriangles.push_back(clippedTriangleABD);
 			outputTriangles.push_back(clippedTriangleDBE);
@@ -711,6 +759,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.colour = (LerpVector4((in_tri.a.colour), (in_tri.b.colour), ld));
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), ld));
 
+			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.c.position, in_tri.b.position, plane, e.position);
@@ -720,16 +769,20 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = (LerpVector4((in_tri.c.colour), (in_tri.b.colour), le));
 			e.normal = (LerpVector3((in_tri.c.normal), (in_tri.b.normal), le));
 
+			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, le);
+
 			// make two triangles := {a, c, d} & {d, c, e}
 			Triangle clippedTriangleACD;
 			clippedTriangleACD.a = in_tri.a;
 			clippedTriangleACD.b = in_tri.c;
 			clippedTriangleACD.c = d;
+			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.z, dLightNormal });
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
 			clippedTriangleDCE.b = in_tri.c;
 			clippedTriangleDCE.c = e;
+			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
 
 			outputTriangles.push_back(clippedTriangleACD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -748,6 +801,8 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.colour = (LerpVector4((in_tri.a.colour), (in_tri.b.colour), ld));
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), ld));
 
+			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
+
 			Point e;
 			LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, e.position);
 			float le = glm::length(e.position - in_tri.a.position) / glm::length(in_tri.c.position - in_tri.a.position);
@@ -756,11 +811,14 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = (LerpVector4((in_tri.a.colour), (in_tri.c.colour), le));
 			e.normal = (LerpVector3((in_tri.a.normal), (in_tri.c.normal), le));
 
+			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, le);
+
 			// make one triangle := {a, d, e}
 			Triangle clippedTriangleADE;
 			clippedTriangleADE.a = in_tri.a;
 			clippedTriangleADE.b = d;
 			clippedTriangleADE.c = e;
+			outLightDotNormal.push_back({ inLightDotNormal.x, dLightNormal, eLightNormal });
 
 			outputTriangles.push_back(clippedTriangleADE);
 			//std::cout << "One triangle : = {a, d, e}" << std::endl;
@@ -785,6 +843,8 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.colour = (LerpVector4((in_tri.b.colour), (in_tri.a.colour), ld));
 			d.normal = (LerpVector3((in_tri.b.normal), (in_tri.a.normal), ld));
 
+			float dLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.x, ld);
+
 
 			Point e;
 			LinePlaneIntersection(in_tri.c.position, in_tri.a.position, plane, e.position);
@@ -794,16 +854,20 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = (LerpVector4((in_tri.c.colour), (in_tri.a.colour), le));
 			e.normal = (LerpVector3((in_tri.c.normal), (in_tri.a.normal), le));
 
+			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.x, le);
+
 			// make two triangles := {b, c, d} & {d, c, e}
 			Triangle clippedTriangleBCD;
 			clippedTriangleBCD.a = in_tri.b;
 			clippedTriangleBCD.b = in_tri.c;
 			clippedTriangleBCD.c = d;
+			outLightDotNormal.push_back({ inLightDotNormal.y, inLightDotNormal.z, dLightNormal });
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
 			clippedTriangleDCE.b = in_tri.c;
 			clippedTriangleDCE.c = e;
+			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
 
 			outputTriangles.push_back(clippedTriangleBCD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -822,6 +886,9 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.colour = (LerpVector4((in_tri.c.colour), (in_tri.b.colour), ld));
 			d.normal = (LerpVector3((in_tri.c.normal), (in_tri.b.normal), ld));
 
+			float dLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, ld);
+
+
 			Point e;
 			LinePlaneIntersection(in_tri.a.position, in_tri.b.position, plane, e.position);
 			float le = glm::length(e.position - in_tri.a.position) / glm::length(in_tri.b.position - in_tri.a.position);
@@ -830,11 +897,15 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = (LerpVector4((in_tri.a.colour), (in_tri.b.colour), le));
 			e.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), le));
 
+			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, le);
+
 			// make two triangles := {b, d, e}
 			Triangle clippedTriangleBDE;
 			clippedTriangleBDE.a = in_tri.b;
 			clippedTriangleBDE.b = d;
 			clippedTriangleBDE.c = e;
+
+			outLightDotNormal.push_back({ inLightDotNormal.y, dLightNormal, eLightNormal });
 
 			//std::cout << "One triangle : = {b, d, e}" << std::endl;
 			outputTriangles.push_back(clippedTriangleBDE);
@@ -854,6 +925,9 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			d.colour = (LerpVector4((in_tri.a.colour), (in_tri.c.colour), ld));
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.c.normal), ld));
 
+			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
+
+
 			Point e;
 			LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
 			float le = glm::length(e.position - in_tri.b.position) / glm::length(in_tri.c.position - in_tri.b.position);
@@ -862,11 +936,16 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, std::ve
 			e.colour = (LerpVector4((in_tri.b.colour), (in_tri.c.colour), le));
 			e.normal = (LerpVector3((in_tri.b.normal), (in_tri.c.normal), le));
 
+			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
+
+
 			// make one triangles := {c, d, e}
 			Triangle clippedTriangleCDE;
 			clippedTriangleCDE.a = in_tri.c;
 			clippedTriangleCDE.b = d;
 			clippedTriangleCDE.c = e;
+
+			outLightDotNormal.push_back({ inLightDotNormal.z, dLightNormal, eLightNormal });
 
 			outputTriangles.push_back(clippedTriangleCDE);
 			//std::cout << "One triangles : = {c, d, e}" << std::endl;
@@ -880,7 +959,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	, int curTriangleIndex, int currentTextureIndex, Triangle& modelTriangle, Mat4x4& modelMatrix
 	, Vector3 cameraPosition, Vector3 cameraDirection
 	, const Mat4x4& viewMatrix, const Mat4x4& projectionMatrix
-	, int lineThickness, Colour lineColour, bool debugDraw = false) {
+	, int lineThickness, Colour lineColour, int& totalTrianglesRendered, bool debugDraw = false) {
 
 	//cameraPosition.y *= -1.0f;
 	PROFILE_FUNCTION();
@@ -904,9 +983,16 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 		normalTransformMatrix[3][y] = 0;
 	}
 
+	//PrintMat4x4Pos0(normalTransformMatrix);
+
 	//std::cout << modelTriangle.a.normal.x << ", " << modelTriangle.a.normal.y << ", " << modelTriangle.a.normal.z << std::endl;
+	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
 
 	ApplyTransformToTriangleNormals(transformedTriangle, normalTransformMatrix);
+	transformedTriangle.a.normal.y *= -1.0f;
+	transformedTriangle.b.normal.y *= -1.0f;
+	transformedTriangle.c.normal.y *= -1.0f;
+	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
 
 	//std::cout << modelTriangle.a.normal.x << ", " << modelTriangle.a.normal.y << ", " << modelTriangle.a.normal.z << std::endl;
 
@@ -914,29 +1000,38 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	//transformedTriangle.b.texCoord.y *= -1.0f;
 	//transformedTriangle.c.texCoord.y *= -1.0f;
 
-	Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
-	Vector3 lightPos = { 150.0f, 50.0f, 150.0f };
-	Vector3 lightDirFromTriangle = glm::normalize(lightPos - trianglePos);
+	//Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
+	//Vector3 lightPos = { 150.0f, 50.0f, 150.0f };
+	Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
+	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
+	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
+	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
 
-	Vector3 normal, lineA, lineB;
-	lineA = transformedTriangle.b.position - transformedTriangle.a.position;
-	lineB = transformedTriangle.c.position - transformedTriangle.b.position;
-
-	normal = glm::cross(lineA, lineB);
-	normal = glm::normalize(normal);
+	Vector3 triangleNorm = 0.33f * transformedTriangle.a.normal + 0.33f * transformedTriangle.b.normal + 0.33f * transformedTriangle.c.normal;
 
 	//Vector3 trianglePosRelativeToCamera = cameraPosition - transformedTriangle.a.position;
 	Vector3 trianglePosRelativeToCamera = transformedTriangle.a.position - cameraPosition;
 	trianglePosRelativeToCamera = glm::normalize(trianglePosRelativeToCamera);
 
-	bool curTriangleIsVisibleFromCamera = glm::dot(normal, trianglePosRelativeToCamera) > 0.0f;
+	//bool curTriangleIsVisibleFromCamera = glm::dot(normal, trianglePosRelativeToCamera) > 0.0f;
+	bool curTriangleIsVisibleFromCamera = glm::dot(triangleNorm, trianglePosRelativeToCamera) < 0.0f;
 	bool cameraCouldSeeTriangle = glm::dot(trianglePosRelativeToCamera, cameraDirection) > 0.0f;
 
+	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
+
+
+	//if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
 	if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
 	{
 		//Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
-		float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromTriangle, normal), 0.1f);
+		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
+		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
+		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
+
+		Vector3 lightDotTriangleVertexNormal = { lightDotTriangleNormalA, lightDotTriangleNormalB, lightDotTriangleNormalC };
+		//float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromTriangle, normal), 0.1f);
+		//std::cout << lightDotTriangleVertexNormal.x << ", " << lightDotTriangleVertexNormal.y << ", " << lightDotTriangleVertexNormal.z << std::endl;
 
 		// Transform into view space.
 		Vector4 viewTransformedA = { viewMatrix * Vector4{transformedTriangle.a.position, 1.0f} };
@@ -944,12 +1039,17 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 		Vector4 viewTransformedC = { viewMatrix * Vector4{transformedTriangle.c.position, 1.0f} };
 
 		// Clip Viewed Triangle against near plane, this could form two additional
-		// additional triangles. 
+		// additional triangles.
 		int nClippedTriangles = 0;
 		Triangle curLargeTriangle = Triangle{ {viewTransformedA, modelTriangle.a.texCoord, modelTriangle.a.colour, modelTriangle.a.normal}, {viewTransformedB, modelTriangle.b.texCoord, modelTriangle.b.colour, modelTriangle.b.normal}, {viewTransformedC, modelTriangle.c.texCoord, modelTriangle.c.colour, modelTriangle.c.normal }, colour_white };
 
 		std::vector<Triangle> zClippingOutputTriangles;
-		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, zClippingOutputTriangles);
+		std::vector<Vector3> zClippingLightDotTriangleVertexNormal;
+		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal);
+
+		//if (nClippedTriangles != zClippingLightDotTriangleVertexNormal.size()) {
+		//	std::cout << "NOT EQUAL!!!" << std::endl;
+		//}
 
 		{
 			PROFILE_SCOPE("TESTING FOR CLIPPING.");
@@ -979,9 +1079,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				zClippingOutputTriangles[n].b.texCoord.z = invW.y;
 				zClippingOutputTriangles[n].c.texCoord.z = invW.z;
 
-				zClippingOutputTriangles[n].a.normal *= invW.x;
-				zClippingOutputTriangles[n].b.normal *= invW.y;
-				zClippingOutputTriangles[n].c.normal *= invW.z;
+				zClippingLightDotTriangleVertexNormal[n].x *= invW.x;
+				zClippingLightDotTriangleVertexNormal[n].y *= invW.y;
+				zClippingLightDotTriangleVertexNormal[n].z *= invW.z;
 
 				zClippingOutputTriangles[n].a.colour *= invW.x;
 				zClippingOutputTriangles[n].b.colour *= invW.y;
@@ -1011,43 +1111,59 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 														 zClippingOutputTriangles[n].colour };
 
 				std::vector<Triangle> bottomScreenPlaneClippingResult;
-				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, bottomScreenPlaneClippingResult);
+				std::vector<Vector3> bottomClippingLightDotTriangleNormal;
+				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal);
 				
 				std::vector<Triangle> topScreenPlaneClippingResult;
+				std::vector<Vector3> topClippingLightDotTriangleNormal;
 				for (int i = 0; i < bottomScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], topScreenPlaneClippingResult);
+					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal);
 				}
 
 				std::vector<Triangle> leftScreenPlaneClippingResult;
+				std::vector<Vector3> leftClippingLightDotTriangleNormal;
 				for (int i = 0; i < topScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], leftScreenPlaneClippingResult);
+					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal);
 				}
 
 				std::vector<Triangle> rightScreenPlaneClippingResult;
+				std::vector<Vector3> rightClippingLightDotTriangleNormal;
 				for (int i = 0; i < leftScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], rightScreenPlaneClippingResult);
+					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal);
 				}
 				//std::cout << "Drawing something." << std::endl;
 				//DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curLargeScreenSpaceTriangle, normal, invDepth, invW, lineThickness);
 				for (int i = 0; i < rightScreenPlaneClippingResult.size(); i++)
 				{
-					DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], lightDotTriangleNormal, invDepth, invW, lineThickness);
+					// ENABLE FOR PER VERTEX NORMAL LIGHTING CALCULATIONS!
+
+					//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].a.position);
+					//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].b.position);
+					//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].c.position);
+
+					//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, rightScreenPlaneClippingResult[i].a.normal), 0.1f);
+					//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, rightScreenPlaneClippingResult[i].b.normal), 0.1f);
+					//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, rightScreenPlaneClippingResult[i].c.normal), 0.1f);
+
+					//Vector3 lightDotTriangleVertexNormal = { lightDotTriangleNormalA, lightDotTriangleNormalB, lightDotTriangleNormalC };
+					//totalTrianglesRendered++;
+					DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], invDepth, invW, lineThickness);
 				}
 			}
 		}
 	}
 }
 
-void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Mesh& currentMesh, Mat4x4& modelMatrix, Vector3 cameraPosition, Vector3 cameraDirection, Mat4x4& viewMatrix, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour, bool debugDraw = false) {
+void DrawMeshOnScreenFromWorldWithTransform(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight, Mesh& currentMesh, Mat4x4& modelMatrix, Vector3 cameraPosition, Vector3 cameraDirection, Mat4x4& viewMatrix, Mat4x4& projectionMatrix, int lineThickness, Colour lineColour, int& totalTrianglesRendered, bool debugDraw = false) {
 
 	PROFILE_FUNCTION();
 
 	for (int i = 0; i < currentMesh.triangles.size(); i++)
 	{
 		//std::cout << "READING MESH TEXTURE INDEX 0 : " << currentMesh.textureIndex << std::endl;
-		DrawTriangleOnScreenFromWorldTriangleWithClipping(imageData, imageDepthData, imageWidth, imageHeight, i, currentMesh.textureIndex, currentMesh.triangles[i], modelMatrix, cameraPosition, cameraDirection, viewMatrix, projectionMatrix, lineThickness, lineColour, debugDraw);
+		DrawTriangleOnScreenFromWorldTriangleWithClipping(imageData, imageDepthData, imageWidth, imageHeight, i, currentMesh.textureIndex, currentMesh.triangles[i], modelMatrix, cameraPosition, cameraDirection, viewMatrix, projectionMatrix, lineThickness, lineColour, totalTrianglesRendered, debugDraw);
 	}
 }
