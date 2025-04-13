@@ -24,7 +24,7 @@ public:
 
 int texCoordDebugPrintCounter = 0;
 
-Colour GetColourFromTexCoord(Texture& texture, Vector2 texCoord) {
+Colour GetColourFromTexCoord(const Texture& texture, Vector2 texCoord) {
 
 	if (texCoord.x >= 0.0f && texCoord.x < 1.0f && texCoord.y >= 0.0f && texCoord.y < 1.0f) {
 
@@ -80,7 +80,7 @@ bool LoadTextureFromFile(std::string filePath, Texture& texture) {
 
 		stbi_image_free(readData);
 
-		std::cout << "texture data size := " << texture.data.size() << std::endl;
+		//std::cout << "texture data size := " << texture.data.size() << std::endl;
 
 		return true;
 	}

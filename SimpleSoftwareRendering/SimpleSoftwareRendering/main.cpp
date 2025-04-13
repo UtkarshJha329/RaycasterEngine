@@ -85,6 +85,12 @@ void UpdateKeyStates(GLFWwindow* window) {
     int pKeyState = glfwGetKey(window, GLFW_KEY_P);
     SetKeyBasedOnState(KEY_P, pKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
+    int iKeyState = glfwGetKey(window, GLFW_KEY_I);
+    SetKeyBasedOnState(KEY_I, iKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
+    int oKeyState = glfwGetKey(window, GLFW_KEY_O);
+    SetKeyBasedOnState(KEY_O, oKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
+
     int leftShiftKeyState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
     SetKeyBasedOnState(KEY_LEFT_SHIFT, leftShiftKeyState > 0 ? PRESSED_OR_HELD : RELEASED);
 
@@ -117,6 +123,8 @@ std::string utahTeapotTexturedFileName = "UtahTeapot/UtahTeapot.obj";
 std::string planeTexturedFileName = "TexturedPlane/TexturedPlane.obj";
 std::string colouredCubeFileName = "ColouredCube/ColouredCube.obj";
 std::string colouredAndTexturedCubeFileName = "ColouredAndTexturedCube/ColouredAndTexturedCube.obj";
+std::string monu2FileName = "Monu2MagicaVoxel/monu2.obj";
+std::string LowPolyForestTerrainFileName = "LowPolyForestTerrain/LowPolyForestTerrain.obj";
 
 bool freezeRotation = true;
 
@@ -292,6 +300,7 @@ int main()
 
     float angle = 0.0f;
     float rotationSpeed = 10.0f;
+    float rotationSpeedDelta = 100.0f;
 
     Model testCubeModel;
     //Model eyeballModel;
@@ -301,43 +310,25 @@ int main()
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + colouredCubeFileName, testCubeModel);
-    LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
+    //LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
     //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
-
-    //for (int i = 0; i < Model::textures.size(); i++)
-    //{
-    //    Texture* curTexture = &Model::textures[i];
-    //    std::cout << curTexture->data.size() << std::endl;
-    //    //std::cout << curTexture->width << ", " << curTexture->height << std::endl;
-    //    for (int y = 0; y < curTexture->height; y++)
-    //    {
-    //        std::cout << "Y := " << y << std::endl;
-    //        for (int x = 0; x < curTexture->width; x++)
-    //        {
-    //            //std::cout << x << std::endl;
-    //            Colour curColourOfTexture = GetColourFromTexCoord(*curTexture, Vector2{ x / (float)curTexture->width, y / (float)curTexture->height});
-    //            //std::cout << (int)curColourOfTexture.r << ", " << (int)curColourOfTexture.g << ", " << (int)curColourOfTexture.b << std::endl;
-    //            std::cout << (int)curColourOfTexture.r << std::endl;
-    //        }
-    //    }
-    //}
-
-    //Texture testTexture;
-    ////LoadTextureFromFile("Assets/Models/testImage.jpg", testTexture);
-    //LoadTextureFromFile("Assets/Models/SimpleUV05.png", testTexture);
+    //LoadModel(modelsPath + monu2FileName, testCubeModel);
+    LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
 
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
     {
         PROFILE_SCOPE("GAME LOOP.");
 
+        //std::cout << "Running." << std::endl;
+
         UpdateKeyStates(window);
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> difBetweenPreviousFrameTimeAndCurrentTime = currentTime - previousTime;
         float deltaTime = difBetweenPreviousFrameTimeAndCurrentTime.count() / 1000.0f;
-        //std::cout << deltaTime.count() << std::endl;
+        //std::cout << deltaTime * 1000.0f << " ms." << std::endl;
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -348,6 +339,14 @@ int main()
         //freezeRotation = (GetKeyHeld(KEY_P));
         if (GetKeyPressedInThisFrame(KEY_P)) {
             freezeRotation = !freezeRotation;
+        }
+
+        if (GetKeyPressedInThisFrame(KEY_I)) {
+            rotationSpeed += rotationSpeedDelta;
+        }
+
+        if (GetKeyPressedInThisFrame(KEY_O)) {
+            rotationSpeed -= rotationSpeedDelta;
         }
 
         if (!freezeRotation) {
@@ -418,6 +417,9 @@ int main()
             modelMat = glm::rotate(modelMat, glm::radians(angle), Vector3{ 0.0f, 1.0f, 0.0f });
             modelMat = glm::scale(modelMat, Vector3{ 1.0f, 1.0f, 1.0f });
 
+            //std::cout << std::endl;
+            //PrintMat4x4Pos0(modelMat);
+            //std::cout << std::endl;
 
             Mat4x4 cameraTransformMatrix = glm::identity<Mat4x4>();
             cameraTransformMatrix = glm::translate(cameraTransformMatrix, cameraPosition);

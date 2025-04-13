@@ -75,7 +75,7 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
             //std::cout << "Cur point := " << curPoint.position.x << ", " << curPoint.position.y << ", " << curPoint.position.z << ", Tex coords := " << curPoint.texCoord.x << ", " << curPoint.texCoord.y << std::endl;
         }
         else {
-            std::cout << "No texture coordinates." << std::endl;
+            //std::cout << "No texture coordinates." << std::endl;
             curPoint.texCoord = Vector3(0.0f, 0.0f, 0.0f);
         }
 
@@ -93,8 +93,20 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
         }
         else {
             
-            std::cout << "No vertex colours." << std::endl;
-            curPoint.colour = { 0, 0, 0, 255 };
+            //std::cout << "No vertex colours." << std::endl;
+            curPoint.colour = { 255, 255, 255, 255 };
+        }
+
+        if (mesh->HasNormals()) {
+            Vector3 normal;
+            normal.x = mesh->mNormals[i].x;
+            normal.y = mesh->mNormals[i].y;
+            normal.z = mesh->mNormals[i].z;
+
+            curPoint.normal = normal;
+        }
+        else {
+            curPoint.normal = Vector3{ 0.0f, 1.0f, 0.0f };
         }
 
         points.push_back(curPoint);
@@ -132,6 +144,8 @@ Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
     LoadMaterialTextures(Model::textures, material, aiTextureType_DIFFUSE, "texture_diffuse", directory, meshToPopulateWithData);
     //textures.insert(textures.end(), textures.begin(), textures.end());
 
+    //std::cout << "Total number of triangles := " << meshToPopulateWithData.triangles.size() << std::endl;
+
     // return a mesh object created from the extracted mesh data
     return meshToPopulateWithData;
 }
@@ -159,7 +173,7 @@ void LoadModel(std::string const& path, Model& modelToLoadInto)
 {
     // read file via ASSIMP
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs );
+    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs );
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {
