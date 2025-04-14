@@ -184,6 +184,11 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 				imageData[index + 2] = b * lightDotTriangleNormal;
 				imageData[index + 3] = 255;
 
+				//imageData[index + 0] = 255 * lightDotTriangleNormal;
+				//imageData[index + 1] = 255 * lightDotTriangleNormal;
+				//imageData[index + 2] = 255 * lightDotTriangleNormal;
+				//imageData[index + 3] = 255;
+
 				if (drawFixedColour) {
 					imageData[index + 0] = fixedColour.r;
 					imageData[index + 1] = fixedColour.g;
@@ -196,74 +201,6 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 		}
 	}
 
-}
-
-void DrawLineSegmentOnScreenWithInterpolatedValues(const float& imageWidth,
-										Vector2 start, Vector2 end,
-										const Vector3& lightDotTriangleNormals,
-										const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-										const float& areaOfTriangle,
-										const Vector3& invDepth,
-										const Vector3& invW, const Vector3& texWs,
-										const Triangle& curTriangle,
-										const float& colourTextureMixFactor,
-										const Colour& fixedColour, bool drawFixedColour,
-										const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData
-) {
-
-
-	float x0 = start.x;
-	float y0 = start.y;
-	float x1 = end.x;
-	float y1 = end.y;
-
-	bool steep = false;
-
-	if (std::abs(x0 - x1) < std::abs(y0 - y1))
-	{
-		std::swap(x0, y0);
-		std::swap(x1, y1);
-		steep = true;
-	}
-	if (x0 > x1) {
-		std::swap(x0, x1);
-		std::swap(y0, y1);
-	}
-
-	float dx = (float)(x1 - x0);
-	float dy = (float)(y1 - y0);
-
-	//x0 = floor(x0);
-	//x1 = ceil(x1);
-	//y0 = floor(y0);
-	//y1 = ceil(y1);
-
-	if (steep)
-	{
-		for (int x = x0; x <= x1; x++) {
-
-			float t = (x - x0) / dx;
-			int y = y0 + dy * t;
-
-			Vector2 curPoint = Vector2{ y, x };
-
-			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
-
-		}
-	}
-	else
-	{
-		for (int x = x0; x <= x1; x++) {
-
-			float t = (x - x0) / dx;
-			int y = y0 + dy * t;
-
-			Vector2 curPoint = Vector2{ x, y };
-
-			DrawCurrentPixelWithInterpValues(imageWidth, curPoint.x, curPoint.y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texWs, curTriangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
-
-		}
-	}
 }
 
 void BresenhamLineDrawer(Vector2 start, Vector2 end, std::vector<Vector2>& outputPixels) {
@@ -282,14 +219,56 @@ void BresenhamLineDrawer(Vector2 start, Vector2 end, std::vector<Vector2>& outpu
 
 		}
 	}
-	//else {
-	//	std::cout << "dx == 0" << std::endl;
-	//}
 }
 
-// Returns a floating point slope generated between the given x0 and x1 for the required number of steps.
-float GenerateSlopeWithFixedSteps(const int& x0, const int& x1, const int& numSteps) {
-	return (x1 - x0) / numSteps;
+void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d,
+								const float& imageWidth,
+								const Vector3& lightDotTriangleNormals,
+								const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
+								const float& areaOfTriangle,
+								const Vector3& invDepth,
+								const Vector3& invW, const Vector3& texW,
+								const Triangle& triangle,
+								const float& colourTextureMixFactor,
+								const Colour& fixedColour, bool drawFixedColour,
+								const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData
+) {
+
+	std::vector<Vector2> outputPixelsCB;
+	BresenhamLineDrawer(c, b, outputPixelsCB);
+
+	std::vector<Vector2> outputPixelsCD;
+	BresenhamLineDrawer(c, d, outputPixelsCD);
+
+	int indexPointCB = 0;
+	int indexPointCD = 0;
+	while (indexPointCB < outputPixelsCB.size() && indexPointCD < outputPixelsCD.size()) {
+
+		int x0 = outputPixelsCB[indexPointCB].x;
+		int x1 = outputPixelsCD[indexPointCD].x;
+
+		int curYCB = outputPixelsCB[indexPointCB].y;
+		while (curYCB == outputPixelsCB[indexPointCB].y) {
+			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			indexPointCB++;
+		}
+
+		int curYCD = outputPixelsCD[indexPointCD].y;
+		while (curYCB == curYCD && curYCD == outputPixelsCD[indexPointCD].y) {
+			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			indexPointCD++;
+		}
+
+		if (x0 > x1) {
+			std::swap(x0, x1);
+		}
+
+		// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
+		for (int x = x0; x < x1; x++) {
+			DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		}
+
+	}
 }
 
 bool IsLineTopOrLeft(Vector2Int start, Vector2Int end) {
@@ -419,163 +398,38 @@ void DrawCurrentTrianglePixel(const float& imageWidth,
 
 }
 
-void DrawCurrentFlatLine(const float& imageWidth,
-	const float& y, const float& yTop,
-	const float& startX, const float& endX,
-	const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
-	const Vector3& lightDotTriangleNormals,
-	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-	const float& areaOfTriangle,
-	const Vector3& invDepth,
-	const Vector3& invW, const Vector3& texW,
-	const float& colourTextureMixFactor, const Colour& fixedColour,
-	const Triangle& triangle,
-	const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
-{
-	int x1 = startX;
-	int x2 = endX;
-	if (x1 > x2) {
-		std::swap(x1, x2);
-	}
-
-	x1 = floor(x1);
-	x2 = ceil(x2);
-
-	int numPixelsForPadding = 3;
-	////x1 -= numPixelsForPadding;
-	x2 += numPixelsForPadding;
-
-	////x1 = std::max(boundingBoxMin.x, x1);
-	x2 = std::min((int)round(boundingBoxMax.x), x2);
-
-	//float x1 = boundingBoxMin.x;
-	//float x2 = boundingBoxMax.x;
-
-	//x1 = std::max(x1, 0.0f);
-	for (int x = x1; x <= x2; x++)
-	{
-		//std::cout << "Stuck 3 := " <<  x << std::endl;
-		DrawCurrentTrianglePixel(imageWidth, x, y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, fixedColour, false, curTex, imageData, imageDepthData);
-		//if (abs(x - x1) <= 2 || abs(x - x2) == 2) {
-		//	DrawCurrentPixel(imageWidth, x, y, deltaY, deltaX, deltaK, biasEdgeFloat, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_black, true, curTex, imageData, imageDepthData);
-		//}
-		//else {
-		//	DrawCurrentPixel(imageWidth, x, y, deltaY, deltaX, deltaK, biasEdgeFloat, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_white, false, curTex, imageData, imageDepthData);
-		//}
-	}
-
-}
-
 int printRate = 1000;
 int printCounter = 0;
 
-void DrawFlatBottomTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight,
-							const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
-							const Vector3& d,
-							const Vector3& lightDotTriangleNormals,
-							const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-							const float& areaOfTriangle,
-							const Vector3& invDepth,
-							const Vector3& invW, const Vector3& texW,
-							const Triangle& triangle, const Texture* curTex,
-							const float& colourTextureMixFactor,
-							const Colour& fixedColour, bool drawFixedColour,
-							int lineThickness) {
-
-	float startScanLineXTop = triangle.c.position.x;
-	float endScanLineXTop = triangle.c.position.x;
-
-	float slope1DeltaX = triangle.b.position.x - triangle.c.position.x;
-	float slope1DeltaY = triangle.b.position.y - triangle.c.position.y;
-
-	float slope2DeltaX = d.x - triangle.c.position.x;
-	float slope2DeltaY = triangle.b.position.y - triangle.c.position.y;
-
-	float slope1Top = (slope1DeltaX) / (slope1DeltaY);
-	float slope2Top = (slope2DeltaX) / (slope2DeltaY);
-
-	for (int y = triangle.c.position.y; y <= triangle.b.position.y; y++)
-	{
-		DrawCurrentFlatLine(imageWidth, y, triangle.c.position.y, startScanLineXTop, endScanLineXTop, boundingBoxMin, boundingBoxMax, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_blue, triangle, curTex, imageData, imageDepthData);
-		//DrawCurrentFlatLine(imageWidth, y, triangle.c.position.y, boundingBoxMin.x, boundingBoxMax.x, boundingBoxMin, boundingBoxMax, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_blue, triangle, curTex, imageData, imageDepthData);
-
-		startScanLineXTop += (slope1Top);
-		endScanLineXTop += (slope2Top);
-	}
-
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.c.position, triangle.b.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.c.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-
-}
-
-void DrawFlatTopTriangle(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData, int imageWidth, int imageHeight,
-	const Vector2& boundingBoxMin, const Vector2& boundingBoxMax,
-	const Vector3& d,
-	const Vector3& lightDotTriangleNormals,
-	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-	const float& areaOfTriangle,
-	const Vector3& invDepth,
-	const Vector3& invW, const Vector3& texW,
-	const Triangle& triangle, const Texture* curTex,
-	const float& colourTextureMixFactor,
-	const Colour& fixedColour, bool drawFixedColour,
-	int lineThickness) {
-
-
-	float startScanLineXBottom = triangle.a.position.x;
-	float endScanLineXBottom = triangle.a.position.x;
-
-	float slope1Bottom = (triangle.a.position.x - triangle.b.position.x) / (triangle.a.position.y - triangle.b.position.y);
-	float slope2Bottom = (triangle.a.position.x - d.x) / (triangle.a.position.y - triangle.b.position.y);
-
-	for (int y = triangle.a.position.y; y >= triangle.b.position.y; y--)
-	{
-		DrawCurrentFlatLine(imageWidth, y, triangle.b.position.y, startScanLineXBottom, endScanLineXBottom, boundingBoxMin, boundingBoxMax, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_red, triangle, curTex, imageData, imageDepthData);
-		//DrawCurrentFlatLine(imageWidth, y, triangle.b.position.y, boundingBoxMin.x, boundingBoxMax.x, boundingBoxMin, boundingBoxMax, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, colourTextureMixFactor, colour_red, triangle, curTex, imageData, imageDepthData);
-
-		startScanLineXBottom -= (slope1Bottom);
-		endScanLineXBottom -= (slope2Bottom);
-	}
-
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.b.position, triangle.a.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, triangle.a.position, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-	DrawLineSegmentOnScreenWithInterpolatedValues(imageWidth, d, triangle.b.position, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_pink, false, curTex, imageData, imageDepthData);
-
-}
-
-void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData,
+void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData,
 	int imageWidth, int imageHeight,
 	int curTriangleIndex, int currentTextureIndex,
-	const Triangle& drawTriangle, const Vector3& lightDotTriangleNormals,
+	const Triangle& drawTriangle, Vector3 lightDotTriangleNormals,
 	Vector3 invDepth, Vector3 invW,
 	int lineThickness)
 {
 	PROFILE_FUNCTION();
 
 	Triangle triangle = drawTriangle;
-	//PrintColour(triangle.a.colour);
-	//PrintColour(triangle.b.colour);
-	//PrintColour(triangle.c.colour);
-	//triangle.a.colour = colour_blue;
-	//triangle.b.colour = colour_red;
-	//triangle.c.colour = colour_green;
 
-	// Sort points based on their y coordinates to end up with := [TopOnScreen = C, Middle = b, BottomOnScreen = a]
+	// Sort points based on their y coordinates to end up with := [TopOnScreen = C, MiddleOnScreen = b, BottomOnScreen = a]
 	if (triangle.a.position.y < triangle.b.position.y) {
 		std::swap(triangle.a, triangle.b);
 		std::swap(invDepth.x, invDepth.y);
 		std::swap(invW.x, invW.y);
+		std::swap(lightDotTriangleNormals.x, lightDotTriangleNormals.y);
 	}
 	if (triangle.a.position.y < triangle.c.position.y) {
 		std::swap(triangle.a, triangle.c);
 		std::swap(invDepth.x, invDepth.z);
 		std::swap(invW.x, invW.z);
+		std::swap(lightDotTriangleNormals.x, lightDotTriangleNormals.z);
 	}
 	if (triangle.b.position.y < triangle.c.position.y) {
 		std::swap(triangle.b, triangle.c);
 		std::swap(invDepth.y, invDepth.z);
 		std::swap(invW.y, invW.z);
+		std::swap(lightDotTriangleNormals.y, lightDotTriangleNormals.z);
 	}
 
 	//float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y) * 0.5f;
@@ -613,112 +467,18 @@ void DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(std::vector<unsigned c
 	boundingBoxMin = Vector2{ std::min(boundingBoxMin.x, triangle.c.position.x), std::min(boundingBoxMin.y, triangle.c.position.y) };
 	boundingBoxMax = Vector2{ std::max(boundingBoxMax.x, triangle.c.position.x), std::max(boundingBoxMax.y, triangle.c.position.y) };
 
-
-	//if (ceil(triangle.a.position.y) == ceil(triangle.b.position.y) && (ceil(triangle.a.position.x) != ceil(triangle.b.position.x))) {
-	//	Vector3 d = triangle.a.position;
-	//	d.z = 0.0f;
-	//	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-	//}
-	//else if(ceil(triangle.c.position.y) == ceil(triangle.b.position.y) && (ceil(triangle.c.position.x) != ceil(triangle.b.position.x))) {
-	//	Vector3 d = triangle.c.position;
-	//	d.z = 0.0f;
-	//	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-	//}
-	//else {
-
-	//	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
-	//	Vector3 d = { x4, triangle.b.position.y, 0.0f };
-
-
-	//	DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-	//	DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-	//}
-
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
-	//DrawFlatBottomTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-	//DrawFlatTopTriangle(imageData, imageDepthData, imageWidth, imageHeight, boundingBoxMin, boundingBoxMax, d, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, curTex, colourTextureMixFactor, colour_red, false, lineThickness);
-
-
 	{
 		//Top triangle.
-		std::vector<Vector2> outputPixelsCB;
-		BresenhamLineDrawer(triangle.c.position, triangle.b.position, outputPixelsCB);
+		BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
 
-		std::vector<Vector2> outputPixelsCD;
-		BresenhamLineDrawer(triangle.c.position, d, outputPixelsCD);
-
-		int indexPointCB = 0;
-		int indexPointCD = 0;
-		while (indexPointCB < outputPixelsCB.size() && indexPointCD < outputPixelsCD.size()) {
-
-			int x0 = outputPixelsCB[indexPointCB].x;
-			int x1 = outputPixelsCD[indexPointCD].x;
-
-			int curYCB = outputPixelsCB[indexPointCB].y;
-			while (curYCB == outputPixelsCB[indexPointCB].y) {
-				//pointsToDraw.push_back(outputPixelsCB[indexPointCB]);
-				DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-				indexPointCB++;
-			}
-
-			int curYCD = outputPixelsCD[indexPointCD].y;
-			while (curYCB == curYCD && curYCD == outputPixelsCD[indexPointCD].y) {
-				//pointsToDraw.push_back(outputPixelsCA[indexPointCA]);
-				DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-				indexPointCD++;
-			}
-
-			if (x0 > x1) {
-				std::swap(x0, x1);
-			}
-			for (int x = x0; x < x1 + 1; x++) {
-				//pointsToDraw.push_back({ (float)x, (float)curYCB });
-				DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-			}
-
-		}
 	}
 
 	{
 		//Bottom triangle.
-		std::vector<Vector2> outputPixelsAB;
-		BresenhamLineDrawer(triangle.a.position, triangle.b.position, outputPixelsAB);
-
-		std::vector<Vector2> outputPixelsAD;
-		BresenhamLineDrawer(triangle.a.position, d, outputPixelsAD);
-
-		int indexPointAB = 0;
-		int indexPointAD = 0;
-		while (indexPointAB < outputPixelsAB.size() && indexPointAD < outputPixelsAD.size()) {
-
-			int x0 = outputPixelsAB[indexPointAB].x;
-			int x1 = outputPixelsAD[indexPointAD].x;
-
-			int curYAB = outputPixelsAB[indexPointAB].y;
-			while (curYAB == outputPixelsAB[indexPointAB].y) {
-				//pointsToDraw.push_back(outputPixelsCB[indexPointCB]);
-				DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsAB[indexPointAB].x, outputPixelsAB[indexPointAB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-				indexPointAB++;
-			}
-
-			int curYAD = outputPixelsAD[indexPointAD].y;
-			while (curYAB == curYAD && curYAD == outputPixelsAD[indexPointAD].y) {
-				//pointsToDraw.push_back(outputPixelsCA[indexPointCA]);
-				DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsAD[indexPointAD].x, outputPixelsAD[indexPointAD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-				indexPointAD++;
-			}
-			
-			if (x0 > x1) {
-				std::swap(x0, x1);
-			}
-			for (int x = x0; x < x1 + 1; x++) {
-				//pointsToDraw.push_back({ (float)x, (float)curYCB });
-				DrawCurrentPixelWithInterpValues(imageWidth, x, curYAB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-			}
-
-		}
+		BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
 	}
 
 
@@ -1053,12 +813,16 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	//transformedTriangle.b.texCoord.y *= -1.0f;
 	//transformedTriangle.c.texCoord.y *= -1.0f;
 
-	//Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
+	Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
 	//Vector3 lightPos = { 150.0f, 50.0f, 150.0f };
 	Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
 	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
 	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
 	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
+
+	//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - trianglePos);
+	//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - trianglePos);
+	//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - trianglePos);
 
 	Vector3 triangleNorm = 0.33f * transformedTriangle.a.normal + 0.33f * transformedTriangle.b.normal + 0.33f * transformedTriangle.c.normal;
 
@@ -1078,6 +842,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	{
 		//Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
+		//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, triangleNorm), 0.1f);
+		//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, triangleNorm), 0.1f);
+		//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, triangleNorm), 0.1f);
 		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
 		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
 		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
@@ -1140,14 +907,6 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				zClippingOutputTriangles[n].b.colour *= invW.y;
 				zClippingOutputTriangles[n].c.colour *= invW.z;
 
-				//Vector4 interpolatableColourA = ColourToVector4(zClippingOutputTriangles[n].a.colour) * invW.x;
-				//Vector4 interpolatableColourB = ColourToVector4(zClippingOutputTriangles[n].b.colour) * invW.y;
-				//Vector4 interpolatableColourC = ColourToVector4(zClippingOutputTriangles[n].c.colour) * invW.z;
-
-				//zClippingOutputTriangles[n].a.colour = Vector4ToColour(interpolatableColourA);
-				//zClippingOutputTriangles[n].b.colour = Vector4ToColour(interpolatableColourB);
-				//zClippingOutputTriangles[n].c.colour = Vector4ToColour(interpolatableColourC);
-
 				//Transform into Screen Space
 				projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
 				projectedPointB.x += 1.0f; projectedPointB.y += 1.0f;
@@ -1191,19 +950,8 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				//DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curLargeScreenSpaceTriangle, normal, invDepth, invW, lineThickness);
 				for (int i = 0; i < rightScreenPlaneClippingResult.size(); i++)
 				{
-					// ENABLE FOR PER VERTEX NORMAL LIGHTING CALCULATIONS!
-
-					//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].a.position);
-					//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].b.position);
-					//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - rightScreenPlaneClippingResult[i].c.position);
-
-					//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, rightScreenPlaneClippingResult[i].a.normal), 0.1f);
-					//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, rightScreenPlaneClippingResult[i].b.normal), 0.1f);
-					//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, rightScreenPlaneClippingResult[i].c.normal), 0.1f);
-
-					//Vector3 lightDotTriangleVertexNormal = { lightDotTriangleNormalA, lightDotTriangleNormalB, lightDotTriangleNormalC };
 					//totalTrianglesRendered++;
-					DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], invDepth, invW, lineThickness);
+					DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], invDepth, invW, lineThickness);
 				}
 			}
 		}
