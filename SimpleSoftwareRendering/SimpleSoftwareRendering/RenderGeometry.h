@@ -249,7 +249,7 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 
 		int curYCB = outputPixelsCB[indexPointCB].y;
 		while (curYCB == outputPixelsCB[indexPointCB].y) {
-			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_blue, false, curTex, imageData, imageDepthData);
 			indexPointCB++;
 		}
 
@@ -263,13 +263,110 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 			std::swap(x0, x1);
 		}
 
+		if (x0 > x1) {
+			std::cout << x0 << ", " << x1 << std::endl;
+		}
+
 		// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
 		for (int x = x0; x < x1; x++) {
-			DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_green, false, curTex, imageData, imageDepthData);
 		}
 
 	}
 }
+
+// Slower and unstable.
+void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const Vector2& d,
+									const float& imageWidth,
+									const Vector3& lightDotTriangleNormals,
+									const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
+									const float& areaOfTriangle,
+									const Vector3& invDepth,
+									const Vector3& invW, const Vector3& texW,
+									const Triangle& triangle,
+									const float& colourTextureMixFactor,
+									const Colour& fixedColour, bool drawFixedColour,
+									const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
+{
+
+	float startY = round(c.y);
+	float endY = round(b.y);
+
+	float startXCB = round(c.x);
+	float startXCD = round(c.x);
+
+	float endXCB = round(b.x);
+	float endXCD = round(d.x);
+
+	if (endXCB > endXCD) {
+		std::swap(endXCB, endXCD);
+	}
+
+	float dXCB = (endXCB - startXCB);
+	float dXCD = (endXCD - startXCD);
+	float dY = (endY - startY);
+	
+	if (dY != 0) {
+
+		float dir = dY / abs(dY);
+
+		float stepCB = std::max(abs(dXCB), abs(dY));
+		float stepCD = std::max(abs(dXCD), abs(dY));
+
+		float stepXCB = dXCB / stepCB;
+		float stepYCB = dY / stepCB;
+
+		float stepXCD = dXCD / stepCD;
+		float stepYCD = dY / stepCD;
+
+		int indexStepCB = 0;
+		int indexStepCD = 0;
+
+		float curYCB = startY;
+		float curXCB = startXCB;
+		float curYCD = startY;
+		float curXCD = startXCD;
+
+		float curY = round(startY);
+		while (curY != round(endY + dir)) {
+
+			float x0 = round(curXCB);
+			while (indexStepCB <= stepCB && curY == curYCB) {
+
+				//pixelsToDraw.push_back({(float)round(curXCB), (float)(round(curYCB))});
+				DrawCurrentPixelWithInterpValues(imageWidth, curXCB, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+
+				curXCB = round(startXCB + (indexStepCB * stepXCB));
+				curYCB = round(startY + (indexStepCB * stepYCB));
+
+				indexStepCB++;
+			}
+
+			float x1 = round(curXCD);
+			while (indexStepCD <= stepCD && curY == curYCD) {
+
+				//pixelsToDraw.push_back({(float)round(curXCD), (float)(round(curYCD))});
+				DrawCurrentPixelWithInterpValues(imageWidth, curXCD, curYCD, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+
+				curXCD = round(startXCD + (indexStepCD * stepXCD));
+				curYCD = round(startY + (indexStepCD * stepYCD));
+
+				//std::cout << "curY := " << curY << ", curYCB := " << curYCB << ", curYCD := " << curYCD << std::endl;
+
+				indexStepCD++;
+			}
+
+			// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
+			for (int x = x0; x <= x1; x++) {
+				//pixelsToDraw.push_back({ (float)x, (float)curY });
+				DrawCurrentPixelWithInterpValues(imageWidth, x, curY, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			}
+
+			curY += dir;
+		}
+	}
+}
+
 
 bool IsLineTopOrLeft(Vector2Int start, Vector2Int end) {
 
@@ -470,15 +567,23 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
-	{
-		//Top triangle.
-		BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-
+	if (round(triangle.a.position.y) == round(triangle.b.position.y)) {
+		BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
 	}
+	else if (round(triangle.c.position.y) == round(triangle.b.position.y)) {
+		BresenhamTriangleDrawer(triangle.a.position, triangle.c.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+	}
+	else {
+		{
+			//Top triangle.
+			BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
 
-	{
-		//Bottom triangle.
-		BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		}
+
+		{
+			//Bottom triangle.
+			BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		}
 	}
 
 
