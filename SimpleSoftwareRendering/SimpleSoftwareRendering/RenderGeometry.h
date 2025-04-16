@@ -138,7 +138,7 @@ struct PixelRenderingData {
 	const Texture* curTex;
 };
 
-void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, const float& y, PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
+void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, const float& y, const PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
 
 	//std::cout << "Stuck 4" << std::endl;
 
@@ -157,25 +157,6 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 
 	float depth = 1.0f / ((alpha * prd.invDepth.x) + (beta * prd.invDepth.y) + (gamma * prd.invDepth.z));
 
-	float w = 1.0f / ((alpha * prd.invW.x) + (beta * prd.invW.y) + (gamma * prd.invW.z));
-	float texW = 1.0f / ((alpha * prd.texWs.x) + (beta * prd.texWs.y) + (gamma * prd.texWs.z));
-
-	Vector2 texCoord = (alpha * prd.curTriangle.a.texCoord) + (beta * prd.curTriangle.b.texCoord) + (gamma * prd.curTriangle.c.texCoord);
-	texCoord *= texW;
-
-	Vector3 normal = (alpha * prd.curTriangle.a.normal) + (beta * prd.curTriangle.b.normal) + (gamma * prd.curTriangle.c.normal);
-	normal *= texW;
-
-	//Vector3 worldPositionOfFragment = (alpha * GetVector3FromMat3x3(prd.vertexWorldPositions, 0)) + (beta * GetVector3FromMat3x3(prd.vertexWorldPositions, 1)) + (gamma * GetVector3FromMat3x3(prd.vertexWorldPositions, 2));
-	//worldPositionOfFragment *= texW;
-
-	float lightDotTriangleNormal = (alpha * prd.lightDotTriangleNormals.x) + (beta * prd.lightDotTriangleNormals.y) + (gamma * prd.lightDotTriangleNormals.z);
-	lightDotTriangleNormal *= texW;
-
-	//Vector4 curColour = (alpha * ColourToVector4(curTriangle.a.colour) * invW.x) + (beta * ColourToVector4(curTriangle.b.colour) * invW.y) + (gamma * ColourToVector4(curTriangle.c.colour) * invW.z);
-	Vector4 curColour = (alpha * prd.curTriangle.a.colour) + (beta * prd.curTriangle.b.colour) + (gamma * prd.curTriangle.c.colour);
-	curColour *= texW;
-
 	int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
 	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
@@ -186,6 +167,25 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 			int index = GetRedFlattenedImageDataSlotForPixel(curPoint, imageWidth);
 			if (index >= 0 && (index + 3) < imageData.size())
 			{
+				float w = 1.0f / ((alpha * prd.invW.x) + (beta * prd.invW.y) + (gamma * prd.invW.z));
+				float texW = 1.0f / ((alpha * prd.texWs.x) + (beta * prd.texWs.y) + (gamma * prd.texWs.z));
+
+				Vector2 texCoord = (alpha * prd.curTriangle.a.texCoord) + (beta * prd.curTriangle.b.texCoord) + (gamma * prd.curTriangle.c.texCoord);
+				texCoord *= texW;
+
+				Vector3 normal = (alpha * prd.curTriangle.a.normal) + (beta * prd.curTriangle.b.normal) + (gamma * prd.curTriangle.c.normal);
+				normal *= texW;
+
+				//Vector3 worldPositionOfFragment = (alpha * GetVector3FromMat3x3(prd.vertexWorldPositions, 0)) + (beta * GetVector3FromMat3x3(prd.vertexWorldPositions, 1)) + (gamma * GetVector3FromMat3x3(prd.vertexWorldPositions, 2));
+				//worldPositionOfFragment *= texW;
+
+				float lightDotTriangleNormal = (alpha * prd.lightDotTriangleNormals.x) + (beta * prd.lightDotTriangleNormals.y) + (gamma * prd.lightDotTriangleNormals.z);
+				lightDotTriangleNormal *= texW;
+
+				//Vector4 curColour = (alpha * ColourToVector4(curTriangle.a.colour) * invW.x) + (beta * ColourToVector4(curTriangle.b.colour) * invW.y) + (gamma * ColourToVector4(curTriangle.c.colour) * invW.z);
+				Vector4 curColour = (alpha * prd.curTriangle.a.colour) + (beta * prd.curTriangle.b.colour) + (gamma * prd.curTriangle.c.colour);
+				curColour *= texW;
+
 				//curColour = { 255, 255, 255, 255 };
 
 				//std::cout << "Drawing pixel." << std::endl;
@@ -257,22 +257,7 @@ void BresenhamLineDrawer(Vector2 start, Vector2 end, std::vector<Vector2>& outpu
 	}
 }
 
-
-/*
-const Vector3& lightDotTriangleNormals,
-const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-const float& areaOfTriangle,
-const Vector3& invDepth,
-const Vector3& invW, const Vector3& texW,
-Mat3x3& vertexWorldPositions,
-const Triangle& triangle,
-const float& colourTextureMixFactor,
-const Colour& fixedColour, bool drawFixedColour,
-const Texture* curTex
-*/
-
-void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d, const float& imageWidth, PixelRenderingData& prd , std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData
-) {
+void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d, const float& imageWidth, const PixelRenderingData& prd , std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
 
 	std::vector<Vector2> outputPixelsCB;
 	BresenhamLineDrawer(c, b, outputPixelsCB);
@@ -318,23 +303,9 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 	}
 }
 
-/*
-* 
-									const Vector3& lightDotTriangleNormals,
-									const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-									const float& areaOfTriangle,
-									const Vector3& invDepth,
-									const Vector3& invW, const Vector3& texW,
-									Mat3x3& vertexWorldPositions,
-									const Triangle& triangle,
-									const float& colourTextureMixFactor,
-									const Colour& fixedColour, bool drawFixedColour,
-									const Texture* curTex
-*/
-
 // Slower and unstable.
 void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const Vector2& d,
-									const float& imageWidth, PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
+									const float& imageWidth, const PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
 {
 
 	float startY = round(c.y);
@@ -625,7 +596,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
-	PixelRenderingData prd = {lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, /*vertexWorldPositions,*/ triangle, colourTextureMixFactor, colour_blue, false, curTex};
+	const PixelRenderingData prd = {lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, /*vertexWorldPositions,*/ triangle, colourTextureMixFactor, colour_blue, false, curTex};
 
 	if (round(triangle.a.position.y) == round(triangle.b.position.y)) {
 		//BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
@@ -1060,40 +1031,38 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
 	//Vector3 lightPos = { 150.0f, 50.0f, 150.0f };
 	Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
-	//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
-	//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
-	//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
+	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
+	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
+	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
 
-	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - trianglePos);
-	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - trianglePos);
-	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - trianglePos);
+	//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - trianglePos);
+	//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - trianglePos);
+	//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - trianglePos);
 
 	Vector3 triangleNorm = 0.33f * transformedTriangle.a.normal + 0.33f * transformedTriangle.b.normal + 0.33f * transformedTriangle.c.normal;
 
 	//Vector3 trianglePosRelativeToCamera = cameraPosition - transformedTriangle.a.position;
+	//cameraPosition.y *= -1.0f;
 	Vector3 trianglePosRelativeToCamera = transformedTriangle.a.position - cameraPosition;
 	trianglePosRelativeToCamera = glm::normalize(trianglePosRelativeToCamera);
 
-	//bool curTriangleIsVisibleFromCamera = glm::dot(normal, trianglePosRelativeToCamera) > 0.0f;
-	bool curTriangleIsVisibleFromCamera = glm::dot(triangleNorm, trianglePosRelativeToCamera) < 0.0f;
 	bool cameraCouldSeeTriangle = glm::dot(trianglePosRelativeToCamera, cameraDirection) > 0.0f;
 
 	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
 
 
-	//if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
-	if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
+	if (cameraCouldSeeTriangle)
 	{
 		//Mat3x3 worldVertexPositions = { transformedTriangle.a.position, transformedTriangle.b.position, transformedTriangle.c.position };
 
 		//Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
-		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, triangleNorm), 0.1f);
-		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, triangleNorm), 0.1f);
-		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, triangleNorm), 0.1f);
-		//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
-		//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
-		//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
+		//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, triangleNorm), 0.1f);
+		//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, triangleNorm), 0.1f);
+		//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, triangleNorm), 0.1f);
+		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
+		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
+		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
 
 		Vector3 lightDotTriangleVertexNormal = { lightDotTriangleNormalA, lightDotTriangleNormalB, lightDotTriangleNormalC };
 		//float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromTriangle, normal), 0.1f);
