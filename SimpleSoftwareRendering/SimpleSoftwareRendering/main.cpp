@@ -357,16 +357,16 @@ int main()
             someChildUIRect.colour = { colour_blue.r, colour_blue.g, colour_blue.b, colour_blue.a };
 
             if (j == 0) {
-                someChildUIRect.anchorPosition = TopLeft;
+                someChildUIRect.anchorPosition = TopMiddle;
             }
             else if (j == 1) {
-                someChildUIRect.anchorPosition = TopRight;
+                someChildUIRect.anchorPosition = MiddleRight;
             }
             else if (j == 2) {
-                someChildUIRect.anchorPosition = BottomLeft;
+                someChildUIRect.anchorPosition = BottomMiddle;
             }
             else if (j == 3) {
-                someChildUIRect.anchorPosition = BottomRight;
+                someChildUIRect.anchorPosition = MiddleLeft;
             }
 
             rootUIRect.children[i].children.push_back(someChildUIRect);
