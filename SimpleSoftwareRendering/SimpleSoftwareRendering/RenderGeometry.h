@@ -155,13 +155,13 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 
 	//std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
 
-	float depth = 1.0f / ((alpha * prd.invDepth.x) + (beta * prd.invDepth.y) + (gamma * prd.invDepth.z));
+	float calcDepth = 1.0f / ((alpha * prd.invDepth.x) + (beta * prd.invDepth.y) + (gamma * prd.invDepth.z));
 
 	int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && depth > imageDepthData[depthDataIndex])
+	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < calcDepth)
 	{
-		imageDepthData[depthDataIndex] = depth;
+		imageDepthData[depthDataIndex] = calcDepth;
 		//std::cout << "Pixel has passed depth test." << std::endl;
 		{
 			//std::cout << "Ready to draw pixel." << std::endl;
@@ -215,6 +215,11 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 				//Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
 				//Vector3 lightDirFromFragment = glm::normalize(lightPos - worldPositionOfFragment);
 				//float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromFragment, normal), 0.1f);
+
+				//imageData[index + 0] = 255 * calcDepth;
+				//imageData[index + 1] = 255 * calcDepth;
+				//imageData[index + 2] = 255 * calcDepth;
+				//imageData[index + 3] = 255;
 
 				imageData[index + 0] = r * lightDotTriangleNormal;
 				imageData[index + 1] = g * lightDotTriangleNormal;
@@ -647,7 +652,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 
 
 //int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, Mat3x3& interpWorldVertexPositions, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, std::vector<Mat3x3>& outWorldVertexPositions, bool test = false)
-int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, bool test = false)
+int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 invDepth, Vector3 inLightDotNormal, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, std::vector<Vector3>& invDepths, bool test = false)
 {
 	PROFILE_FUNCTION();
 
@@ -658,6 +663,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 	if (da > 0.0f && db > 0.0f && dc > 0.0f) {
 		outputTriangles.push_back(in_tri);
 		outLightDotNormal.push_back(inLightDotNormal);
+		invDepths.push_back(invDepth);
 		//outWorldVertexPositions.push_back(interpWorldVertexPositions);
 		return 1;
 	}
@@ -683,6 +689,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
+			float dInvDepth = LerpFloat(invDepth.x, invDepth.z, ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
@@ -693,6 +700,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			float eInvDepth = LerpFloat(invDepth.y, invDepth.z, le);
 
 			// make two triangles := { a, b, d} & {d, b, e}
 			Triangle clippedTriangleABD;
@@ -707,6 +715,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.y, dLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.x, invDepth.y, dInvDepth });
 
 			Triangle clippedTriangleDBE;
 			clippedTriangleDBE.a = d;
@@ -720,6 +729,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.y, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions2);
+			invDepths.push_back({ dInvDepth, invDepth.y, eInvDepth });
 
 			outputTriangles.push_back(clippedTriangleABD);
 			outputTriangles.push_back(clippedTriangleDBE);
@@ -742,6 +752,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			float dInvDepth = LerpFloat(invDepth.x, invDepth.y, ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.c.position, in_tri.b.position, plane, e.position);
@@ -753,6 +764,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
+			float eInvDepth = LerpFloat(invDepth.z, invDepth.y, le);
 
 			// make two triangles := {a, c, d} & {d, c, e}
 			Triangle clippedTriangleACD;
@@ -767,6 +779,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.z, dLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.x, invDepth.z, dInvDepth });
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
@@ -780,6 +793,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions2);
+			invDepths.push_back({ dInvDepth, invDepth.z, eInvDepth });
 
 			outputTriangles.push_back(clippedTriangleACD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -800,6 +814,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			float dInvDepth = LerpFloat(invDepth.x, invDepth.y, ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, e.position);
@@ -811,6 +826,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			float eInvDepth = LerpFloat(invDepth.x, invDepth.z, le);
 
 			// make one triangle := {a, d, e}
 			Triangle clippedTriangleADE;
@@ -825,6 +841,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, dLightNormal, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.x, dInvDepth, eInvDepth });
 
 			outputTriangles.push_back(clippedTriangleADE);
 			//std::cout << "One triangle : = {a, d, e}" << std::endl;
@@ -851,6 +868,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float dLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.x, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 0), ld);
+			float dInvDepth = LerpFloat(invDepth.y, invDepth.x, ld);
 
 
 			Point e;
@@ -863,6 +881,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.x, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 0), le);
+			float eInvDepth = LerpFloat(invDepth.z, invDepth.x, le);
 
 			// make two triangles := {b, c, d} & {d, c, e}
 			Triangle clippedTriangleBCD;
@@ -877,6 +896,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.y, inLightDotNormal.z, dLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.y, invDepth.z, dInvDepth });
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
@@ -890,6 +910,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions2);
+			invDepths.push_back({ dInvDepth, invDepth.z, eInvDepth });
 
 			outputTriangles.push_back(clippedTriangleBCD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -910,6 +931,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float dLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			float dInvDepth = LerpFloat(invDepth.z, invDepth.y, ld);
 
 
 			Point e;
@@ -922,6 +944,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
+			float eInvDepth = LerpFloat(invDepth.x, invDepth.y, le);
 
 			// make two triangles := {b, d, e}
 			Triangle clippedTriangleBDE;
@@ -936,6 +959,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.y, dLightNormal, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.y, dInvDepth, eInvDepth });
 
 			//std::cout << "One triangle : = {b, d, e}" << std::endl;
 			outputTriangles.push_back(clippedTriangleBDE);
@@ -957,6 +981,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
 			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
+			float dInvDepth = LerpFloat(invDepth.x, invDepth.z, ld);
 
 
 			Point e;
@@ -969,6 +994,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
 			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			float eInvDepth = LerpFloat(invDepth.y, invDepth.z, le);
 
 
 			// make one triangles := {c, d, e}
@@ -984,6 +1010,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 
 			outLightDotNormal.push_back({ inLightDotNormal.z, dLightNormal, eLightNormal });
 			//outWorldVertexPositions.push_back(outWorldPositions1);
+			invDepths.push_back({ invDepth.z, dInvDepth, eInvDepth });
 
 			outputTriangles.push_back(clippedTriangleCDE);
 			//std::cout << "One triangles : = {c, d, e}" << std::endl;
@@ -1094,9 +1121,10 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 		std::vector<Triangle> zClippingOutputTriangles;
 		std::vector<Vector3> zClippingLightDotTriangleVertexNormal;
+		std::vector<Vector3> zClippingInvDepts;
 		//std::vector<Mat3x3> zClippingWorldVertexPositions;
 		//nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, worldVertexPositions, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal, zClippingWorldVertexPositions);
-		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal);
+		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, {0.0f, 0.0f, 0.0f}, lightDotTriangleVertexNormal, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal, zClippingInvDepts);
 
 		//if (nClippedTriangles != zClippingLightDotTriangleVertexNormal.size()) {
 		//	std::cout << "NOT EQUAL!!!" << std::endl;
@@ -1113,14 +1141,18 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 				// Get W for interpolation in Screen Space.
 				Vector3 invW = Vector3{ 1.0f / projectedPointA.w, 1.0f / projectedPointB.w, 1.0f / projectedPointC.w };
+				//std::cout << invW.x << ", " << invW.y << ", " << invW.z << std::endl;
+
 
 				//Transform into NDC space.
 				projectedPointA = projectedPointA * invW.x;
 				projectedPointB = projectedPointB * invW.y;
 				projectedPointC = projectedPointC * invW.z;
 
+
 				// Get depth for Z-Buffer
 				Vector3 invDepth = Vector3{ 1.0f / projectedPointA.z, 1.0f / projectedPointB.z, 1.0f / projectedPointC.z };
+				//std::cout << invDepth.x << ", " << invDepth.y << ", " << invDepth.z << std::endl;
 
 				zClippingOutputTriangles[n].a.texCoord *= invW.x;
 				zClippingOutputTriangles[n].b.texCoord *= invW.y;
@@ -1163,35 +1195,39 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 				std::vector<Triangle> bottomScreenPlaneClippingResult;
 				std::vector<Vector3> bottomClippingLightDotTriangleNormal;
+				std::vector<Vector3> bottomClippingInvDepth;
 				//std::vector<Mat3x3> bottomClippingWorldPositions;
 				//TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], zClippingWorldVertexPositions[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal, bottomClippingWorldPositions);
-				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal);
+				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, invDepth, zClippingLightDotTriangleVertexNormal[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal, bottomClippingInvDepth);
 				
 				std::vector<Triangle> topScreenPlaneClippingResult;
 				std::vector<Vector3> topClippingLightDotTriangleNormal;
+				std::vector<Vector3> topClippingInvDepth;
 				//std::vector<Mat3x3> topClippingWorldPositions;
 				for (int i = 0; i < bottomScreenPlaneClippingResult.size(); i++)
 				{
 					//TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], bottomClippingWorldPositions[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal, topClippingWorldPositions);
-					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal);
+					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingInvDepth[i], bottomClippingLightDotTriangleNormal[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal, topClippingInvDepth);
 				}
 
 				std::vector<Triangle> leftScreenPlaneClippingResult;
 				std::vector<Vector3> leftClippingLightDotTriangleNormal;
+				std::vector<Vector3> leftClippingInvDepth;
 				//std::vector<Mat3x3> leftClippingWorldPositions;
 				for (int i = 0; i < topScreenPlaneClippingResult.size(); i++)
 				{
 					//TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], topClippingWorldPositions[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal, leftClippingWorldPositions);
-					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal);
+					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingInvDepth[i], topClippingLightDotTriangleNormal[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal, leftClippingInvDepth);
 				}
 
 				std::vector<Triangle> rightScreenPlaneClippingResult;
 				std::vector<Vector3> rightClippingLightDotTriangleNormal;
+				std::vector<Vector3> rightClippingInvDepth;
 				//std::vector<Mat3x3> rightClippingWorldPositions;
 				for (int i = 0; i < leftScreenPlaneClippingResult.size(); i++)
 				{
 					//TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], leftClippingWorldPositions[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal, rightClippingWorldPositions);
-					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal);
+					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingInvDepth[i], leftClippingLightDotTriangleNormal[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal, rightClippingInvDepth);
 				}
 				//std::cout << "Drawing something." << std::endl;
 				//DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curLargeScreenSpaceTriangle, normal, invDepth, invW, lineThickness);
@@ -1199,7 +1235,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				{
 					totalTrianglesRendered++;
 					//DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], rightClippingWorldPositions[i], invDepth, invW, lineThickness);
-					DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], invDepth, invW, lineThickness);
+					DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], rightClippingInvDepth[i], invW, lineThickness);
 				}
 			}
 		}
