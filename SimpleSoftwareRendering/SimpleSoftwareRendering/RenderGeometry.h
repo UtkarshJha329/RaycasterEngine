@@ -134,7 +134,7 @@ struct PixelRenderingData {
 	//Mat3x3& vertexWorldPositions;
 	const Triangle& curTriangle;
 	const float& colourTextureMixFactor;
-	const Colour& fixedColour; bool drawFixedColour;
+	Colour& fixedColour; bool drawFixedColour;
 	const Texture* curTex;
 };
 
@@ -257,7 +257,7 @@ void BresenhamLineDrawer(Vector2 start, Vector2 end, std::vector<Vector2>& outpu
 	}
 }
 
-void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d, const float& imageWidth, const PixelRenderingData& prd , std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
+void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d, const float& imageWidth, PixelRenderingData& prd , std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
 
 	std::vector<Vector2> outputPixelsCB;
 	BresenhamLineDrawer(c, b, outputPixelsCB);
@@ -275,6 +275,8 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 		int curYCB = outputPixelsCB[indexPointCB].y;
 		while (curYCB == outputPixelsCB[indexPointCB].y) {
 			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_blue, false, curTex, imageData, imageDepthData);
+			prd.drawFixedColour = true;
+			prd.fixedColour = colour_blue;
 			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, prd, imageData, imageDepthData);
 			indexPointCB++;
 		}
@@ -282,6 +284,8 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 		int curYCD = outputPixelsCD[indexPointCD].y;
 		while (curYCB == curYCD && curYCD == outputPixelsCD[indexPointCD].y) {
 			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			prd.drawFixedColour = true;
+			prd.fixedColour = colour_red;
 			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, prd, imageData, imageDepthData);
 			indexPointCD++;
 		}
@@ -293,6 +297,8 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 		if (x0 > x1) {
 			std::cout << x0 << ", " << x1 << std::endl;
 		}
+
+		prd.drawFixedColour = false;
 
 		// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
 		for (int x = x0; x < x1; x++) {
@@ -596,7 +602,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
-	const PixelRenderingData prd = {lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, /*vertexWorldPositions,*/ triangle, colourTextureMixFactor, colour_blue, false, curTex};
+	PixelRenderingData prd = {lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, /*vertexWorldPositions,*/ triangle, colourTextureMixFactor, colour_blue, false, curTex};
 
 	if (round(triangle.a.position.y) == round(triangle.b.position.y)) {
 		//BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
@@ -1043,10 +1049,13 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 	//Vector3 trianglePosRelativeToCamera = cameraPosition - transformedTriangle.a.position;
 	//cameraPosition.y *= -1.0f;
-	Vector3 trianglePosRelativeToCamera = transformedTriangle.a.position - cameraPosition;
+	//Vector3 trianglePosRelativeToCamera = transformedTriangle.a.position - cameraPosition;
+	Vector3 trianglePosRelativeToCamera = trianglePos - cameraPosition;
 	trianglePosRelativeToCamera = glm::normalize(trianglePosRelativeToCamera);
 
-	bool cameraCouldSeeTriangle = glm::dot(trianglePosRelativeToCamera, cameraDirection) > 0.0f;
+	//bool cameraCouldSeeTriangle = glm::dot(trianglePosRelativeToCamera, cameraDirection) > 0.0f;
+	//bool cameraCouldSeeTriangle = glm::dot(triangleNorm, cameraDirection) < 0.0f;
+	bool cameraCouldSeeTriangle = glm::dot(triangleNorm, trianglePosRelativeToCamera) < 0.0f;
 
 	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
 

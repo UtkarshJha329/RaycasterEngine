@@ -309,9 +309,9 @@ int main()
     //LoadModel(modelsPath + testUtahTeaPotFileName, testCubeModel);
     //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
-    LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + colouredCubeFileName, testCubeModel);
-    //LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
+    LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
     //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + monu2FileName, testCubeModel);
