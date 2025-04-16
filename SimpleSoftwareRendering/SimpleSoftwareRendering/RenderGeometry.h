@@ -159,8 +159,9 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 
 	int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
 
-	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && imageDepthData[depthDataIndex] < depth)
+	if (depthDataIndex >= 0 && depthDataIndex < imageDepthData.size() && depth > imageDepthData[depthDataIndex])
 	{
+		imageDepthData[depthDataIndex] = depth;
 		//std::cout << "Pixel has passed depth test." << std::endl;
 		{
 			//std::cout << "Ready to draw pixel." << std::endl;
@@ -232,10 +233,11 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, c
 					imageData[index + 3] = 255;
 				}
 			}
-
-			imageDepthData[depthDataIndex] = depth;
 		}
 	}
+	//else if(depthDataIndex >= 0 && depthDataIndex < imageDepthData.size()){
+	//	std::cout << "Failed test calculated depth := " << depth << ", Existing depth := " << imageDepthData[depthDataIndex] << std::endl;
+	//}
 
 }
 
@@ -275,8 +277,9 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 		int curYCB = outputPixelsCB[indexPointCB].y;
 		while (curYCB == outputPixelsCB[indexPointCB].y) {
 			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_blue, false, curTex, imageData, imageDepthData);
-			prd.drawFixedColour = true;
-			prd.fixedColour = colour_blue;
+			//prd.drawFixedColour = true;
+			//prd.drawFixedColour = false;
+			//prd.fixedColour = colour_blue;
 			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, prd, imageData, imageDepthData);
 			indexPointCB++;
 		}
@@ -284,8 +287,9 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 		int curYCD = outputPixelsCD[indexPointCD].y;
 		while (curYCB == curYCD && curYCD == outputPixelsCD[indexPointCD].y) {
 			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
-			prd.drawFixedColour = true;
-			prd.fixedColour = colour_red;
+			//prd.drawFixedColour = true;
+			//prd.drawFixedColour = false;
+			//prd.fixedColour = colour_red;
 			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, prd, imageData, imageDepthData);
 			indexPointCD++;
 		}
@@ -298,7 +302,7 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 			std::cout << x0 << ", " << x1 << std::endl;
 		}
 
-		prd.drawFixedColour = false;
+		//prd.drawFixedColour = false;
 
 		// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
 		for (int x = x0; x < x1; x++) {
@@ -1060,6 +1064,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	//std::cout << transformedTriangle.a.normal.x << ", " << transformedTriangle.a.normal.y << ", " << transformedTriangle.a.normal.z << std::endl;
 
 
+	//if (cameraCouldSeeTriangle || true)
 	if (cameraCouldSeeTriangle)
 	{
 		//Mat3x3 worldVertexPositions = { transformedTriangle.a.position, transformedTriangle.b.position, transformedTriangle.c.position };

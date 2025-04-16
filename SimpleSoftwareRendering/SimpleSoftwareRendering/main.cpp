@@ -311,11 +311,11 @@ int main()
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + colouredCubeFileName, testCubeModel);
-    LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
+    //LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
     //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + monu2FileName, testCubeModel);
-    //LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
+    LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
     //LoadModel(modelsPath + texturedSuzanneFileName, testCubeModel);
 
     auto previousTime = std::chrono::high_resolution_clock::now();
