@@ -1060,13 +1060,13 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	Vector3 trianglePos = 0.33f * transformedTriangle.a.position + 0.33f * transformedTriangle.b.position + 0.33f * transformedTriangle.c.position;
 	//Vector3 lightPos = { 150.0f, 50.0f, 150.0f };
 	Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
-	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
-	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
-	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
+	//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - transformedTriangle.a.position);
+	//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - transformedTriangle.b.position);
+	//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - transformedTriangle.c.position);
 
-	//Vector3 lightDirFromTriangleA = glm::normalize(lightPos - trianglePos);
-	//Vector3 lightDirFromTriangleB = glm::normalize(lightPos - trianglePos);
-	//Vector3 lightDirFromTriangleC = glm::normalize(lightPos - trianglePos);
+	Vector3 lightDirFromTriangleA = glm::normalize(lightPos - trianglePos);
+	Vector3 lightDirFromTriangleB = glm::normalize(lightPos - trianglePos);
+	Vector3 lightDirFromTriangleC = glm::normalize(lightPos - trianglePos);
 
 	Vector3 triangleNorm = 0.33f * transformedTriangle.a.normal + 0.33f * transformedTriangle.b.normal + 0.33f * transformedTriangle.c.normal;
 
@@ -1088,12 +1088,12 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 		//Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
-		//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, triangleNorm), 0.1f);
-		//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, triangleNorm), 0.1f);
-		//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, triangleNorm), 0.1f);
-		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
-		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
-		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
+		float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, triangleNorm), 0.1f);
+		float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, triangleNorm), 0.1f);
+		float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, triangleNorm), 0.1f);
+		//float lightDotTriangleNormalA = glm::max(glm::dot(lightDirFromTriangleA, transformedTriangle.a.normal), 0.1f);
+		//float lightDotTriangleNormalB = glm::max(glm::dot(lightDirFromTriangleB, transformedTriangle.b.normal), 0.1f);
+		//float lightDotTriangleNormalC = glm::max(glm::dot(lightDirFromTriangleC, transformedTriangle.c.normal), 0.1f);
 
 		Vector3 lightDotTriangleVertexNormal = { lightDotTriangleNormalA, lightDotTriangleNormalB, lightDotTriangleNormalC };
 		//float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromTriangle, normal), 0.1f);
