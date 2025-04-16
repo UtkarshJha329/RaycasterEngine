@@ -18,6 +18,8 @@
 #include "CameraUtils.h"
 
 std::vector<Texture> Model::textures;
+std::vector<UI_Rect> UI_Rect::uiRects;
+std::vector<std::vector<unsigned int>> UI_CollisionGrid::uiRectIndexInCollisionGrid(numGridsOnScreen.x * numGridsOnScreen.y);
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -133,14 +135,11 @@ bool freezeRotation = true;
 
 const int lineThickness = 2;
 
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
 const float distToNearPlane = 0.1f;
 const float distToFarPlane = 1000.0f;
 const float fov = 90.0f;
-const float aspectRatio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
-const float aspectRatioR = (float)SCR_HEIGHT / (float)SCR_WIDTH;
+const float aspectRatio = (float)screenWidth / (float)screenHeight;
+const float aspectRatioR = (float)screenHeight / (float)screenWidth;
 const float oneOverFOV = 1.0f / glm::tan(glm::radians(fov * 0.5f));
 
 int main()
@@ -159,20 +158,20 @@ int main()
     Colour blue = { 0, 0, 255, 255 };
     Colour playerColour = { 255, 0, 0, 255 };
 
-    Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovRH_NO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
+    Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovRH_NO(glm::radians(fov * 0.5f), (float)screenWidth, (float)screenHeight, distToNearPlane, distToFarPlane);
     //Mat4x4 perspectiveProjectionMatrix = glm::perspectiveFovRH_ZO(glm::radians(fov * 0.5f), (float)SCR_WIDTH, (float)SCR_HEIGHT, distToNearPlane, distToFarPlane);
 
-    std::vector<unsigned char> imageData(SCR_WIDTH * SCR_HEIGHT * NUM_COMPONENTS_IN_PIXEL);
-    std::vector<float> imageDepthData(SCR_WIDTH * SCR_HEIGHT);
-    ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-    ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 0.0f);
+    std::vector<unsigned char> imageData(screenWidth * screenHeight * NUM_COMPONENTS_IN_PIXEL);
+    std::vector<float> imageDepthData(screenWidth * screenHeight);
+    ClearImage(imageData, screenWidth, screenHeight, backgroundColour);
+    ClearImageDepth(imageDepthData, screenWidth, screenHeight, 0.0f);
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -272,7 +271,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screenWidth, screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
     glGenerateMipmap(GL_TEXTURE_2D);
 
     int frame = 0;
@@ -315,11 +314,8 @@ int main()
     LoadModel(modelsPath + texturedSuzanneFileName, testModel);
 
 
-    UI_Rect rootUIRect;
-    rootUIRect.start = { 10.0f, 10.0f, 0.0f };
-    rootUIRect.end = { 400.0f, 500.0f, 0.0f };
-    rootUIRect.colour = { colour_red.r, colour_red.g, colour_red.b, colour_red.a };
-    rootUIRect.anchorPosition = MiddleMiddle;
+    const int rootUIRectIndex = UI_Rect::uiRects.size();
+    UI_Rect::uiRects.push_back({ rootUIRectIndex, { 10.0f, 10.0f, 0.0f }, { 400.0f, 500.0f, 0.0f }, { colour_red.r, colour_red.g, colour_red.b, colour_red.a }, MiddleMiddle });
 
     int numChildrenUIRects = 4;
     int numChildrenForChildren = 4;
@@ -330,6 +326,7 @@ int main()
         someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
         someChildUIRect.end = { 150.0f, 150.0f, 0.0f };
         someChildUIRect.colour = { colour_yellow.r, colour_yellow.g, colour_yellow.b, colour_yellow.a };
+        someChildUIRect.index = UI_Rect::uiRects.size();
 
         if (i == 0) {
             someChildUIRect.anchorPosition = TopLeft;
@@ -344,7 +341,9 @@ int main()
             someChildUIRect.anchorPosition = BottomRight;
         }
 
-        rootUIRect.children.push_back(someChildUIRect);
+
+        UI_Rect::uiRects[rootUIRectIndex].children.push_back(someChildUIRect.index);
+        UI_Rect::uiRects.push_back(someChildUIRect);
     }
 
     for (int i = 0; i < numChildrenUIRects; i++)
@@ -355,6 +354,7 @@ int main()
             someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
             someChildUIRect.end = { 50.0f, 50.0f, 0.0f };
             someChildUIRect.colour = { colour_blue.r, colour_blue.g, colour_blue.b, colour_blue.a };
+            someChildUIRect.index = UI_Rect::uiRects.size();
 
             if (j == 0) {
                 someChildUIRect.anchorPosition = TopMiddle;
@@ -369,9 +369,15 @@ int main()
                 someChildUIRect.anchorPosition = MiddleLeft;
             }
 
-            rootUIRect.children[i].children.push_back(someChildUIRect);
+            //rootUIRect.children[i].children.push_back(someChildUIRect);
+            UI_Rect::uiRects[UI_Rect::uiRects[rootUIRectIndex].children[i]].children.push_back(someChildUIRect.index);
+            UI_Rect::uiRects.push_back(someChildUIRect);
+
         }
     }
+
+    RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);
+    AddUITreeToCollisionGrid();
 
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
@@ -390,8 +396,8 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        ClearImage(imageData, SCR_WIDTH, SCR_HEIGHT, backgroundColour);
-        ClearImageDepth(imageDepthData, SCR_WIDTH, SCR_HEIGHT, 0.0f);
+        ClearImage(imageData, screenWidth, screenHeight, backgroundColour);
+        ClearImageDepth(imageDepthData, screenWidth, screenHeight, 0.0f);
 
         //freezeRotation = (GetKeyHeld(KEY_P));
         if (GetKeyPressedInThisFrame(KEY_P)) {
@@ -501,16 +507,21 @@ int main()
                 int totalTrianglesRendered = 0;
                 for (int i = 0; i < testModel.meshes.size(); i++)
                 {
-                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, totalTrianglesRendered);
+                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, screenWidth, screenHeight, testModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, totalTrianglesRendered);
                 }
                 //std::cout << "Total triangles rendered := " << totalTrianglesRendered << std::endl;
             }
         }
 
-        RenderUITree(rootUIRect, SCR_WIDTH, SCR_HEIGHT, imageData);
+        //std::cout << (int)mouseX / (int)collisionGridCellSize.x << ", " << (int)(screenHeight - mouseY) / (int)collisionGridCellSize.y << std::endl;
+
+        RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);
+        float screenYFlipped = screenHeight - mouseY;
+        float mouseXVal = mouseX;
+        HighlightMouseHoveringOverRect(mouseXVal, screenYFlipped);
 
         glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screenWidth, screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
         //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Model::textures[0].width, Model::textures[0].height, 0, GL_RGBA, GL_UNSIGNED_BYTE, Model::textures[0].data.data());
         //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, testTexture.width, testTexture.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, testTexture.data.data());
         glGenerateMipmap(GL_TEXTURE_2D);

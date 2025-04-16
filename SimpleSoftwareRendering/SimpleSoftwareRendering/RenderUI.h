@@ -112,27 +112,25 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 	}
 }
 
-void RenderUIRect(const UI_Rect& uiRect, const UI_Rect& parentUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
+void RenderUIRect(UI_Rect& uiRect, const UI_Rect& parentUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
 
 	Vector3 start = uiRect.start;
 	Vector3 end = uiRect.end;
 
 	TransformUIPositionsToParentSpaceBasedOnAnchor(start, end, uiRect, parentUIRect);
 
-	RenderRectangleOnScreen(parentUIRect.start + start, parentUIRect.start + end, uiRect.colour, imageWidth, imageHeight, imageData);
+	uiRect.worldStartPos = parentUIRect.worldStartPos + start;
+	uiRect.worldEndPos = parentUIRect.worldStartPos + end;
+
+	RenderRectangleOnScreen(uiRect.worldStartPos, uiRect.worldEndPos, uiRect.colour, imageWidth, imageHeight, imageData);
 
 	for (int i = 0; i < uiRect.children.size(); i++)
 	{
-		UI_Rect fakeParentRect;
-		fakeParentRect.anchorPosition = uiRect.anchorPosition;
-		fakeParentRect.start = parentUIRect.start + start;
-		fakeParentRect.end = parentUIRect.start + end;
-
-		RenderUIRect(uiRect.children[i], fakeParentRect, imageWidth, imageHeight, imageData);
+		RenderUIRect(UI_Rect::uiRects[uiRect.children[i]], uiRect, imageWidth, imageHeight, imageData);
 	}
 }
 
-UI_Rect RenderUIRoot(const UI_Rect& rootUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
+void RenderUIRoot(UI_Rect& rootUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
 
 	Vector3 start = rootUIRect.start;
 	Vector3 end = rootUIRect.end;
@@ -144,24 +142,54 @@ UI_Rect RenderUIRoot(const UI_Rect& rootUIRect, const int& imageWidth, const int
 
 	TransformUIPositionsToParentSpaceBasedOnAnchor(start, end, rootUIRect, fakeScreenRect);
 
+	rootUIRect.worldStartPos = start;
+	rootUIRect.worldEndPos = end;
+
 	RenderRectangleOnScreen(start, end, rootUIRect.colour, imageWidth, imageHeight, imageData);
 
-	UI_Rect transformedRootRect;
-	transformedRootRect.start = start;
-	transformedRootRect.end = end;
-	transformedRootRect.colour = rootUIRect.colour;
-	transformedRootRect.anchorPosition = rootUIRect.anchorPosition;
-
-	return transformedRootRect;
 }
 
-void RenderUITree(const UI_Rect& rootUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
+void RenderUITree(UI_Rect& rootUIRect, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
 
-	UI_Rect transformedRootUIRect = RenderUIRoot(rootUIRect, imageWidth, imageHeight, imageData);
+	RenderUIRoot(rootUIRect, imageWidth, imageHeight, imageData);
 
 	for (int i = 0; i < rootUIRect.children.size(); i++)
 	{
-		RenderUIRect(rootUIRect.children[i], transformedRootUIRect, imageWidth, imageHeight, imageData);
+		RenderUIRect(UI_Rect::uiRects[rootUIRect.children[i]], rootUIRect, imageWidth, imageHeight, imageData);
 	}
+}
 
+void AddUITreeToCollisionGrid() {
+
+	for (int i = 0; i < UI_Rect::uiRects.size(); i++)
+	{
+		//std::cout << UI_Rect::uiRects.size() << std::endl;
+		AddUIRectToCollisionGrid(UI_Rect::uiRects[i]);
+	}
+}
+
+void HighlightMouseHoveringOverRect(const float& mouseX, const float& mouseY) {
+
+	if (mouseX >= 0 && mouseX < screenWidth && mouseY >= 0 && mouseY <= screenHeight) {
+
+		//std::cout << "Valid Mouse Position." << std::endl;
+
+		Vector2Int collisionGridCoords = { (int)mouseX / (int)collisionGridCellSize.x, (int)mouseY / (int)collisionGridCellSize.y };
+
+		int collisionGridIndex = GetUICollisionGridIndex(collisionGridCoords.x, collisionGridCoords.y, numGridsOnScreen.x);
+		if (collisionGridIndex >= 0 && collisionGridIndex < UI_CollisionGrid::uiRectIndexInCollisionGrid.size()) {
+
+			//std::cout << "Found Valid Grid Cell Position." << collisionGridIndex << ", " << UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex].size() << std::endl;
+			//std::cout << "Found Valid Grid Cell Position := " << collisionGridIndex << std::endl;
+
+			for (int i = 0; i < UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex].size(); i++)
+			{
+				//std::cout << "Going to check uiRectIndex := " << UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i] << std::endl;
+				if (PointLiesInsideUIRect(UI_Rect::uiRects[UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i]], { mouseX, screenHeight - mouseY })) {
+					std::cout << "Point lies inside rect := ";
+					std::cout << UI_Rect::uiRects[UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i]].index << std::endl;
+				}
+			}
+		}
+	}
 }
