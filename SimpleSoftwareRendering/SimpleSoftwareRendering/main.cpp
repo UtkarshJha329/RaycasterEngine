@@ -275,12 +275,6 @@ int main()
 
     int frame = 0;
 
-    int curPosX = SCR_WIDTH / 2;
-    int curPosY = SCR_HEIGHT / 2;
-
-    Vector3 worldUP = Vector3{ 0.0f, 1.0f, 0.0f };
-    Vector3 worldForward = Vector3{ 0.0f, 0.0f, 1.0f };
-
     Vector3 objectPosition = { 0.0f, 0.0f, 4.0f };
 
     Vector3 cameraPosition = Vector3{ 0.0f, -3.0f, 0.0f };
@@ -303,20 +297,20 @@ int main()
     float rotationSpeed = 10.0f;
     float rotationSpeedDelta = 100.0f;
 
-    Model testCubeModel;
+    Model testModel;
     //Model eyeballModel;
     //LoadModel(modelsPath + testCubeFileName, testCubeModel);
     //LoadModel(modelsPath + testUtahTeaPotFileName, testCubeModel);
     //LoadModel(modelsPath + testBlenderMonkeyFileName, testCubeModel);
     //LoadModel(modelsPath + testCubeTexturedFileName, testCubeModel);
-    LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
+    //LoadModel(modelsPath + truckTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + colouredCubeFileName, testCubeModel);
     //LoadModel(modelsPath + colouredAndTexturedCubeFileName, testCubeModel);
     //LoadModel(modelsPath + planeTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + utahTeapotTexturedFileName, testCubeModel);
     //LoadModel(modelsPath + monu2FileName, testCubeModel);
     //LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
-    //LoadModel(modelsPath + texturedSuzanneFileName, testCubeModel);
+    LoadModel(modelsPath + texturedSuzanneFileName, testModel);
 
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
@@ -444,9 +438,9 @@ int main()
             {
                 //PROFILE_SCOPE("RENDERING");
                 int totalTrianglesRendered = 0;
-                for (int i = 0; i < testCubeModel.meshes.size(); i++)
+                for (int i = 0; i < testModel.meshes.size(); i++)
                 {
-                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testCubeModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, totalTrianglesRendered);
+                    DrawMeshOnScreenFromWorldWithTransform(imageData, imageDepthData, SCR_WIDTH, SCR_HEIGHT, testModel.meshes[i], modelMat, cameraPosition, cameraLookingDirection, cameraViewMatrix, perspectiveProjectionMatrix, lineThickness, red, totalTrianglesRendered);
                 }
                 //std::cout << "Total triangles rendered := " << totalTrianglesRendered << std::endl;
             }

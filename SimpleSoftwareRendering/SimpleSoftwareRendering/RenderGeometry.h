@@ -134,7 +134,7 @@ struct PixelRenderingData {
 	//Mat3x3& vertexWorldPositions;
 	const Triangle& curTriangle;
 	const float& colourTextureMixFactor;
-	Colour& fixedColour; bool drawFixedColour;
+	const Colour& fixedColour; bool drawFixedColour;
 	const Texture* curTex;
 };
 

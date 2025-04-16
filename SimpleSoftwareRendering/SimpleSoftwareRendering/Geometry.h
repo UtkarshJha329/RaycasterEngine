@@ -17,29 +17,6 @@ typedef glm::ivec4 Vector4Int;
 typedef glm::mat3x3 Mat3x3;
 typedef glm::mat4x4 Mat4x4;
 
-class PointScreen {
-
-public:
-	Vector3Int position;
-};
-
-class LineSegmentScreen {
-
-public:
-
-	PointScreen a;
-	PointScreen b;
-};
-
-class TriangleScreen {
-
-public:
-
-	PointScreen a;
-	PointScreen b;
-	PointScreen c;
-};
-
 class Point {
 
 public:
@@ -65,17 +42,6 @@ public:
 	Point a;
 	Point b;
 	Point c;
-
-	Colour colour;
-};
-
-class HomogeneousTriangle {
-
-public:
-
-	Vector4 a;
-	Vector4 b;
-	Vector4 c;
 
 	Colour colour;
 };
