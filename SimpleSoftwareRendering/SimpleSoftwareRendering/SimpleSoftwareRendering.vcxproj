@@ -147,8 +147,10 @@
     <ClInclude Include="MeshLoader.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="RenderGeometry.h" />
+    <ClInclude Include="RenderUI.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="UIGeometry.h" />
     <ClInclude Include="WorldConstants.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

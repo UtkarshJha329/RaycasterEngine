@@ -23,7 +23,7 @@ struct UI_Rect {
 
 	Vector4 colour;
 
-	AnchorPosition anchorPosition;
+	AnchorPosition anchorPosition = TopLeft;
 
 	std::vector<UI_Rect> children;
 };

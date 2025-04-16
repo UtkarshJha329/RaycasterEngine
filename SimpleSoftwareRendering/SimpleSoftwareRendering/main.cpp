@@ -10,8 +10,10 @@
 
 #include "Instrumentor.h"
 #include "Geometry.h"
+#include "UIGeometry.h"
 #include "Model.h"
 #include "RenderGeometry.h"
+#include "RenderUI.h"
 #include "MeshLoader.h"
 #include "CameraUtils.h"
 
@@ -312,6 +314,65 @@ int main()
     //LoadModel(modelsPath + LowPolyForestTerrainFileName, testCubeModel);
     LoadModel(modelsPath + texturedSuzanneFileName, testModel);
 
+
+    UI_Rect rootUIRect;
+    rootUIRect.start = { 10.0f, 10.0f, 0.0f };
+    rootUIRect.end = { 400.0f, 500.0f, 0.0f };
+    rootUIRect.colour = { colour_red.r, colour_red.g, colour_red.b, colour_red.a };
+    rootUIRect.anchorPosition = MiddleMiddle;
+
+    int numChildrenUIRects = 4;
+    int numChildrenForChildren = 4;
+
+    for (int i = 0; i < numChildrenUIRects; i++)
+    {
+        UI_Rect someChildUIRect;
+        someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
+        someChildUIRect.end = { 150.0f, 150.0f, 0.0f };
+        someChildUIRect.colour = { colour_yellow.r, colour_yellow.g, colour_yellow.b, colour_yellow.a };
+
+        if (i == 0) {
+            someChildUIRect.anchorPosition = TopLeft;
+        }
+        else if (i == 1) {
+            someChildUIRect.anchorPosition = TopRight;
+        }
+        else if (i == 2) {
+            someChildUIRect.anchorPosition = BottomLeft;
+        }
+        else if (i == 3) {
+            someChildUIRect.anchorPosition = BottomRight;
+        }
+
+        rootUIRect.children.push_back(someChildUIRect);
+    }
+
+    for (int i = 0; i < numChildrenUIRects; i++)
+    {
+        for (int j = 0; j < numChildrenForChildren; j++)
+        {
+            UI_Rect someChildUIRect;
+            someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
+            someChildUIRect.end = { 50.0f, 50.0f, 0.0f };
+            someChildUIRect.colour = { colour_blue.r, colour_blue.g, colour_blue.b, colour_blue.a };
+
+            if (j == 0) {
+                someChildUIRect.anchorPosition = TopLeft;
+            }
+            else if (j == 1) {
+                someChildUIRect.anchorPosition = TopRight;
+            }
+            else if (j == 2) {
+                someChildUIRect.anchorPosition = BottomLeft;
+            }
+            else if (j == 3) {
+                someChildUIRect.anchorPosition = BottomRight;
+            }
+
+            rootUIRect.children[i].children.push_back(someChildUIRect);
+        }
+    }
+
     auto previousTime = std::chrono::high_resolution_clock::now();
     while (!glfwWindowShouldClose(window))
     {
@@ -445,6 +506,8 @@ int main()
                 //std::cout << "Total triangles rendered := " << totalTrianglesRendered << std::endl;
             }
         }
+
+        RenderUITree(rootUIRect, SCR_WIDTH, SCR_HEIGHT, imageData);
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
