@@ -421,6 +421,7 @@ int main()
 
             //std::cout << std::endl;
             //PrintMat4x4Pos0(modelMat);
+            //PrintMat4x4(modelMat);
             //std::cout << std::endl;
 
             Mat4x4 cameraTransformMatrix = glm::identity<Mat4x4>();

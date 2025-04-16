@@ -14,6 +14,7 @@ typedef glm::vec4 Vector4;
 typedef glm::ivec2 Vector2Int;
 typedef glm::ivec3 Vector3Int;
 typedef glm::ivec4 Vector4Int;
+typedef glm::mat3x3 Mat3x3;
 typedef glm::mat4x4 Mat4x4;
 
 class PointScreen {
