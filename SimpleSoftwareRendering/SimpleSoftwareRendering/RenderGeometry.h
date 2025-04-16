@@ -124,53 +124,56 @@ void DrawLineSegmentOnScreen(std::vector<unsigned char>& imageData, int imageWid
 	}
 }
 
-void DrawCurrentPixelWithInterpValues(const float& imageWidth,
-	const float& x, const float& y,
-	const Vector3& lightDotTriangleNormals,
-	const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-	const float& areaOfTriangle,
-	const Vector3& invDepth,
-	const Vector3& invW, const Vector3& texWs,
-	Mat3x3& vertexWorldPositions,
-	const Triangle& curTriangle,
-	const float& colourTextureMixFactor,
-	const Colour& fixedColour, bool drawFixedColour,
-	const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
+struct PixelRenderingData {
+
+	const Vector3& lightDotTriangleNormals;
+	const Vector3& deltaY; const Vector3& deltaX; const Vector3& deltaK;
+	const float& areaOfTriangle;
+	const Vector3& invDepth;
+	const Vector3& invW; const Vector3& texWs;
+	//Mat3x3& vertexWorldPositions;
+	const Triangle& curTriangle;
+	const float& colourTextureMixFactor;
+	const Colour& fixedColour; bool drawFixedColour;
+	const Texture* curTex;
+};
+
+void DrawCurrentPixelWithInterpValues(const float& imageWidth, const float& x, const float& y, PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData) {
 
 	//std::cout << "Stuck 4" << std::endl;
 
 	Vector2Int curPoint = Vector2Int{ round(x), round(y) };
 	Vector2 curPointFloat = Vector2{ x + 0.5f, y + 0.5f };
 
-	float crossAFloat = ((curPointFloat.x * deltaY.x) - (curPointFloat.y * deltaX.x)) + deltaK.x;
-	float crossBFloat = ((curPointFloat.x * deltaY.y) - (curPointFloat.y * deltaX.y)) + deltaK.y;
-	float crossCFloat = ((curPointFloat.x * deltaY.z) - (curPointFloat.y * deltaX.z)) + deltaK.z;
+	float crossAFloat = ((curPointFloat.x * prd.deltaY.x) - (curPointFloat.y * prd.deltaX.x)) + prd.deltaK.x;
+	float crossBFloat = ((curPointFloat.x * prd.deltaY.y) - (curPointFloat.y * prd.deltaX.y)) + prd.deltaK.y;
+	float crossCFloat = ((curPointFloat.x * prd.deltaY.z) - (curPointFloat.y * prd.deltaX.z)) + prd.deltaK.z;
 
-	float alpha = crossAFloat / areaOfTriangle;
-	float beta = crossBFloat / areaOfTriangle;
-	float gamma = crossCFloat / areaOfTriangle;
+	float alpha = crossAFloat / prd.areaOfTriangle;
+	float beta = crossBFloat / prd.areaOfTriangle;
+	float gamma = crossCFloat / prd.areaOfTriangle;
 
 	//std::cout << "alpha := " << alpha << ", beta := " << beta << ", gamma := " << gamma << std::endl;
 
-	float depth = 1.0f / ((alpha * invDepth.x) + (beta * invDepth.y) + (gamma * invDepth.z));
+	float depth = 1.0f / ((alpha * prd.invDepth.x) + (beta * prd.invDepth.y) + (gamma * prd.invDepth.z));
 
-	float w = 1.0f / ((alpha * invW.x) + (beta * invW.y) + (gamma * invW.z));
-	float texW = 1.0f / ((alpha * texWs.x) + (beta * texWs.y) + (gamma * texWs.z));
+	float w = 1.0f / ((alpha * prd.invW.x) + (beta * prd.invW.y) + (gamma * prd.invW.z));
+	float texW = 1.0f / ((alpha * prd.texWs.x) + (beta * prd.texWs.y) + (gamma * prd.texWs.z));
 
-	Vector2 texCoord = (alpha * curTriangle.a.texCoord) + (beta * curTriangle.b.texCoord) + (gamma * curTriangle.c.texCoord);
+	Vector2 texCoord = (alpha * prd.curTriangle.a.texCoord) + (beta * prd.curTriangle.b.texCoord) + (gamma * prd.curTriangle.c.texCoord);
 	texCoord *= texW;
 
-	Vector3 normal = (alpha * curTriangle.a.normal) + (beta * curTriangle.b.normal) + (gamma * curTriangle.c.normal);
+	Vector3 normal = (alpha * prd.curTriangle.a.normal) + (beta * prd.curTriangle.b.normal) + (gamma * prd.curTriangle.c.normal);
 	normal *= texW;
 
-	Vector3 worldPositionOfFragment = (alpha * GetVector3FromMat3x3(vertexWorldPositions, 0)) + (beta * GetVector3FromMat3x3(vertexWorldPositions, 1)) + (gamma * GetVector3FromMat3x3(vertexWorldPositions, 2));
-	worldPositionOfFragment *= texW;
+	//Vector3 worldPositionOfFragment = (alpha * GetVector3FromMat3x3(prd.vertexWorldPositions, 0)) + (beta * GetVector3FromMat3x3(prd.vertexWorldPositions, 1)) + (gamma * GetVector3FromMat3x3(prd.vertexWorldPositions, 2));
+	//worldPositionOfFragment *= texW;
 
-	float lightDotTriangleNormal = (alpha * lightDotTriangleNormals.x) + (beta * lightDotTriangleNormals.y) + (gamma * lightDotTriangleNormals.z);
+	float lightDotTriangleNormal = (alpha * prd.lightDotTriangleNormals.x) + (beta * prd.lightDotTriangleNormals.y) + (gamma * prd.lightDotTriangleNormals.z);
 	lightDotTriangleNormal *= texW;
 
 	//Vector4 curColour = (alpha * ColourToVector4(curTriangle.a.colour) * invW.x) + (beta * ColourToVector4(curTriangle.b.colour) * invW.y) + (gamma * ColourToVector4(curTriangle.c.colour) * invW.z);
-	Vector4 curColour = (alpha * curTriangle.a.colour) + (beta * curTriangle.b.colour) + (gamma * curTriangle.c.colour);
+	Vector4 curColour = (alpha * prd.curTriangle.a.colour) + (beta * prd.curTriangle.b.colour) + (gamma * prd.curTriangle.c.colour);
 	curColour *= texW;
 
 	int depthDataIndex = GetFlattenedImageDataSlotForDepthData(curPoint, imageWidth);
@@ -189,10 +192,10 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 
 				//Colour texelColour = GetColourFromTexCoord(*curTex, curTexCoord);
 				//Colour texelColour = colourTextureMixFactor < 1.0f ? GetColourFromTexCoord(*curTex, texCoord) : colour_black;
-				Colour texelColour = GetColourFromTexCoord(*curTex, texCoord);
-				float r = ((1.0f - colourTextureMixFactor) * texelColour.r + (colourTextureMixFactor * curColour.r));
-				float g = ((1.0f - colourTextureMixFactor) * texelColour.g + (colourTextureMixFactor * curColour.g));
-				float b = ((1.0f - colourTextureMixFactor) * texelColour.b + (colourTextureMixFactor * curColour.b));
+				Colour texelColour = GetColourFromTexCoord(*(prd.curTex), texCoord);
+				float r = ((1.0f - prd.colourTextureMixFactor) * texelColour.r + (prd.colourTextureMixFactor * curColour.r));
+				float g = ((1.0f - prd.colourTextureMixFactor) * texelColour.g + (prd.colourTextureMixFactor * curColour.g));
+				float b = ((1.0f - prd.colourTextureMixFactor) * texelColour.b + (prd.colourTextureMixFactor * curColour.b));
 
 				//r = texCoord.x * 255;
 				//g = texCoord.y * 255;
@@ -208,9 +211,9 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 				//imageData[index + 2] = 255 * normal.z;
 				//imageData[index + 3] = 255;
 
-				Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
-				Vector3 lightDirFromFragment = glm::normalize(lightPos - worldPositionOfFragment);
-				float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromFragment, normal), 0.1f);
+				//Vector3 lightPos = { 5.0f, -10.0f, -5.0f };
+				//Vector3 lightDirFromFragment = glm::normalize(lightPos - worldPositionOfFragment);
+				//float lightDotTriangleNormal = glm::max(glm::dot(lightDirFromFragment, normal), 0.1f);
 
 				imageData[index + 0] = r * lightDotTriangleNormal;
 				imageData[index + 1] = g * lightDotTriangleNormal;
@@ -222,10 +225,10 @@ void DrawCurrentPixelWithInterpValues(const float& imageWidth,
 				//imageData[index + 2] = 255 * lightDotTriangleNormal;
 				//imageData[index + 3] = 255;
 
-				if (drawFixedColour) {
-					imageData[index + 0] = fixedColour.r;
-					imageData[index + 1] = fixedColour.g;
-					imageData[index + 2] = fixedColour.b;
+				if (prd.drawFixedColour) {
+					imageData[index + 0] = prd.fixedColour.r;
+					imageData[index + 1] = prd.fixedColour.g;
+					imageData[index + 2] = prd.fixedColour.b;
 					imageData[index + 3] = 255;
 				}
 			}
@@ -254,18 +257,21 @@ void BresenhamLineDrawer(Vector2 start, Vector2 end, std::vector<Vector2>& outpu
 	}
 }
 
-void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d,
-								const float& imageWidth,
-								const Vector3& lightDotTriangleNormals,
-								const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
-								const float& areaOfTriangle,
-								const Vector3& invDepth,
-								const Vector3& invW, const Vector3& texW,
-								Mat3x3& vertexWorldPositions,
-								const Triangle& triangle,
-								const float& colourTextureMixFactor,
-								const Colour& fixedColour, bool drawFixedColour,
-								const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData
+
+/*
+const Vector3& lightDotTriangleNormals,
+const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
+const float& areaOfTriangle,
+const Vector3& invDepth,
+const Vector3& invW, const Vector3& texW,
+Mat3x3& vertexWorldPositions,
+const Triangle& triangle,
+const float& colourTextureMixFactor,
+const Colour& fixedColour, bool drawFixedColour,
+const Texture* curTex
+*/
+
+void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& d, const float& imageWidth, PixelRenderingData& prd , std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData
 ) {
 
 	std::vector<Vector2> outputPixelsCB;
@@ -283,13 +289,15 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 
 		int curYCB = outputPixelsCB[indexPointCB].y;
 		while (curYCB == outputPixelsCB[indexPointCB].y) {
-			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_blue, false, curTex, imageData, imageDepthData);
+			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_blue, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCB[indexPointCB].x, outputPixelsCB[indexPointCB].y, prd, imageData, imageDepthData);
 			indexPointCB++;
 		}
 
 		int curYCD = outputPixelsCD[indexPointCD].y;
 		while (curYCB == curYCD && curYCD == outputPixelsCD[indexPointCD].y) {
-			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			//DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, outputPixelsCD[indexPointCD].x, outputPixelsCD[indexPointCD].y, prd, imageData, imageDepthData);
 			indexPointCD++;
 		}
 
@@ -303,15 +311,15 @@ void BresenhamTriangleDrawer(const Vector3& c, const Vector3& b, const Vector3& 
 
 		// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
 		for (int x = x0; x < x1; x++) {
-			DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_green, false, curTex, imageData, imageDepthData);
+			//DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_green, false, curTex, imageData, imageDepthData);
+			DrawCurrentPixelWithInterpValues(imageWidth, x, curYCB, prd, imageData, imageDepthData);
 		}
 
 	}
 }
 
-// Slower and unstable.
-void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const Vector2& d,
-									const float& imageWidth,
+/*
+* 
 									const Vector3& lightDotTriangleNormals,
 									const Vector3& deltaY, const Vector3& deltaX, const Vector3& deltaK,
 									const float& areaOfTriangle,
@@ -321,7 +329,12 @@ void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const V
 									const Triangle& triangle,
 									const float& colourTextureMixFactor,
 									const Colour& fixedColour, bool drawFixedColour,
-									const Texture* curTex, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
+									const Texture* curTex
+*/
+
+// Slower and unstable.
+void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const Vector2& d,
+									const float& imageWidth, PixelRenderingData& prd, std::vector<unsigned char>& imageData, std::vector<float>& imageDepthData)
 {
 
 	float startY = round(c.y);
@@ -369,7 +382,8 @@ void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const V
 			while (indexStepCB <= stepCB && curY == curYCB) {
 
 				//pixelsToDraw.push_back({(float)round(curXCB), (float)(round(curYCB))});
-				DrawCurrentPixelWithInterpValues(imageWidth, curXCB, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				//DrawCurrentPixelWithInterpValues(imageWidth, curXCB, curYCB, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				DrawCurrentPixelWithInterpValues(imageWidth, curXCB, curYCB, prd, imageData, imageDepthData);
 
 				curXCB = round(startXCB + (indexStepCB * stepXCB));
 				curYCB = round(startY + (indexStepCB * stepYCB));
@@ -381,7 +395,8 @@ void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const V
 			while (indexStepCD <= stepCD && curY == curYCD) {
 
 				//pixelsToDraw.push_back({(float)round(curXCD), (float)(round(curYCD))});
-				DrawCurrentPixelWithInterpValues(imageWidth, curXCD, curYCD, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				//DrawCurrentPixelWithInterpValues(imageWidth, curXCD, curYCD, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				DrawCurrentPixelWithInterpValues(imageWidth, curXCD, curYCD, prd, imageData, imageDepthData);
 
 				curXCD = round(startXCD + (indexStepCD * stepXCD));
 				curYCD = round(startY + (indexStepCD * stepYCD));
@@ -394,7 +409,8 @@ void BresenhamTriangleDrawerAdvanced(const Vector2& c, const Vector2& b, const V
 			// No need to draw last pixel because the next triangle with the same points and edge to the left will draw it anyway?
 			for (int x = x0; x <= x1; x++) {
 				//pixelsToDraw.push_back({ (float)x, (float)curY });
-				DrawCurrentPixelWithInterpValues(imageWidth, x, curY, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				//DrawCurrentPixelWithInterpValues(imageWidth, x, curY, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+				DrawCurrentPixelWithInterpValues(imageWidth, x, curY, prd, imageData, imageDepthData);
 			}
 
 			curY += dir;
@@ -537,7 +553,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 	int imageWidth, int imageHeight,
 	int curTriangleIndex, int currentTextureIndex,
 	const Triangle& drawTriangle, Vector3 lightDotTriangleNormals,
-	Mat3x3& vertexWorldPositions,
+	//Mat3x3& vertexWorldPositions,
 	Vector3 invDepth, Vector3 invW,
 	int lineThickness)
 {
@@ -552,7 +568,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 		std::swap(invW.x, invW.y);
 		std::swap(lightDotTriangleNormals.x, lightDotTriangleNormals.y);
 
-		SwapVectorsInMat3x3(vertexWorldPositions, 0, 1);
+		//SwapVectorsInMat3x3(vertexWorldPositions, 0, 1);
 	}
 	if (triangle.a.position.y < triangle.c.position.y) {
 		std::swap(triangle.a, triangle.c);
@@ -560,7 +576,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 		std::swap(invW.x, invW.z);
 		std::swap(lightDotTriangleNormals.x, lightDotTriangleNormals.z);
 
-		SwapVectorsInMat3x3(vertexWorldPositions, 0, 2);
+		//SwapVectorsInMat3x3(vertexWorldPositions, 0, 2);
 	}
 	if (triangle.b.position.y < triangle.c.position.y) {
 		std::swap(triangle.b, triangle.c);
@@ -568,7 +584,7 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 		std::swap(invW.y, invW.z);
 		std::swap(lightDotTriangleNormals.y, lightDotTriangleNormals.z);
 
-		SwapVectorsInMat3x3(vertexWorldPositions, 1, 2);
+		//SwapVectorsInMat3x3(vertexWorldPositions, 1, 2);
 	}
 
 	//float areaOfTriangle = (cFloat.x * aFloat.y - aFloat.x * cFloat.y) * 0.5f;
@@ -609,22 +625,28 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 	float x4 = triangle.c.position.x + ((triangle.b.position.y - triangle.c.position.y) / (triangle.a.position.y - triangle.c.position.y)) * (triangle.a.position.x - triangle.c.position.x);
 	Vector3 d = { x4, triangle.b.position.y, 0.0f };
 
+	PixelRenderingData prd = {lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, /*vertexWorldPositions,*/ triangle, colourTextureMixFactor, colour_blue, false, curTex};
+
 	if (round(triangle.a.position.y) == round(triangle.b.position.y)) {
-		BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		//BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		BresenhamTriangleDrawer(triangle.c.position, triangle.a.position, triangle.b.position, imageWidth, prd, imageData, imageDepthData);
 	}
 	else if (round(triangle.c.position.y) == round(triangle.b.position.y)) {
-		BresenhamTriangleDrawer(triangle.a.position, triangle.c.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		//BresenhamTriangleDrawer(triangle.a.position, triangle.c.position, triangle.b.position, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+		BresenhamTriangleDrawer(triangle.a.position, triangle.c.position, triangle.b.position, imageWidth, prd, imageData, imageDepthData);
 	}
 	else {
 		{
 			//Top triangle.
-			BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			//BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			BresenhamTriangleDrawer(triangle.c.position, triangle.b.position, d, imageWidth, prd, imageData, imageDepthData);
 
 		}
 
 		{
 			//Bottom triangle.
-			BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			//BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, lightDotTriangleNormals, deltaY, deltaX, deltaK, areaOfTriangle, invDepth, invW, texW, vertexWorldPositions, triangle, colourTextureMixFactor, colour_red, false, curTex, imageData, imageDepthData);
+			BresenhamTriangleDrawer(triangle.a.position, triangle.b.position, d, imageWidth, prd, imageData, imageDepthData);
 		}
 	}
 
@@ -643,7 +665,8 @@ void DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(std::vector<unsigned cha
 }
 
 
-int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, Mat3x3& interpWorldVertexPositions, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, std::vector<Mat3x3>& outWorldVertexPositions, bool test = false)
+//int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, Mat3x3& interpWorldVertexPositions, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, std::vector<Mat3x3>& outWorldVertexPositions, bool test = false)
+int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3 inLightDotNormal, std::vector<Triangle>& outputTriangles, std::vector<Vector3>& outLightDotNormal, bool test = false)
 {
 	PROFILE_FUNCTION();
 
@@ -654,7 +677,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 	if (da > 0.0f && db > 0.0f && dc > 0.0f) {
 		outputTriangles.push_back(in_tri);
 		outLightDotNormal.push_back(inLightDotNormal);
-		outWorldVertexPositions.push_back(interpWorldVertexPositions);
+		//outWorldVertexPositions.push_back(interpWorldVertexPositions);
 		return 1;
 	}
 	if (da < 0.0f && db < 0.0f && dc < 0.0f) {
@@ -678,7 +701,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = LerpVector3(in_tri.a.normal, in_tri.c.normal, ld);
 			
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.b.position, in_tri.c.position, plane, e.position);
@@ -688,7 +711,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = LerpVector3((in_tri.b.normal), (in_tri.c.normal), le);
 
 			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
 
 			// make two triangles := { a, b, d} & {d, b, e}
 			Triangle clippedTriangleABD;
@@ -696,26 +719,26 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleABD.b = in_tri.b;
 			clippedTriangleABD.c = d;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
-			SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
-			SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
+			//SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
+			//SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.y, dLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			Triangle clippedTriangleDBE;
 			clippedTriangleDBE.a = d;
 			clippedTriangleDBE.b = in_tri.b;
 			clippedTriangleDBE.c = e;
 
-			Mat3x3 outWorldPositions2;
-			SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
-			SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
-			SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
+			//Mat3x3 outWorldPositions2;
+			//SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
+			//SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
+			//SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.y, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions2);
+			//outWorldVertexPositions.push_back(outWorldPositions2);
 
 			outputTriangles.push_back(clippedTriangleABD);
 			outputTriangles.push_back(clippedTriangleDBE);
@@ -737,7 +760,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), ld));
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.c.position, in_tri.b.position, plane, e.position);
@@ -748,7 +771,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = (LerpVector3((in_tri.c.normal), (in_tri.b.normal), le));
 
 			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
 
 			// make two triangles := {a, c, d} & {d, c, e}
 			Triangle clippedTriangleACD;
@@ -756,26 +779,26 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleACD.b = in_tri.c;
 			clippedTriangleACD.c = d;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
-			SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
+			//SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, inLightDotNormal.z, dLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
 			clippedTriangleDCE.b = in_tri.c;
 			clippedTriangleDCE.c = e;
 
-			Mat3x3 outWorldPositions2;
-			SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
-			SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
+			//Mat3x3 outWorldPositions2;
+			//SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
+			//SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions2);
+			//outWorldVertexPositions.push_back(outWorldPositions2);
 
 			outputTriangles.push_back(clippedTriangleACD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -795,7 +818,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), ld));
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
 
 			Point e;
 			LinePlaneIntersection(in_tri.a.position, in_tri.c.position, plane, e.position);
@@ -806,7 +829,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = (LerpVector3((in_tri.a.normal), (in_tri.c.normal), le));
 
 			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
 
 			// make one triangle := {a, d, e}
 			Triangle clippedTriangleADE;
@@ -814,13 +837,13 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleADE.b = d;
 			clippedTriangleADE.c = e;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
-			SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
-			SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 0));
+			//SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
+			//SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.x, dLightNormal, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			outputTriangles.push_back(clippedTriangleADE);
 			//std::cout << "One triangle : = {a, d, e}" << std::endl;
@@ -846,7 +869,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = (LerpVector3((in_tri.b.normal), (in_tri.a.normal), ld));
 
 			float dLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.x, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 0), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 0), ld);
 
 
 			Point e;
@@ -858,7 +881,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = (LerpVector3((in_tri.c.normal), (in_tri.a.normal), le));
 
 			float eLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.x, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 0), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 0), le);
 
 			// make two triangles := {b, c, d} & {d, c, e}
 			Triangle clippedTriangleBCD;
@@ -866,26 +889,26 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleBCD.b = in_tri.c;
 			clippedTriangleBCD.c = d;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions1, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions1, 2, dPosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.y, inLightDotNormal.z, dLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			Triangle clippedTriangleDCE;
 			clippedTriangleDCE.a = d;
 			clippedTriangleDCE.b = in_tri.c;
 			clippedTriangleDCE.c = e;
 
-			Mat3x3 outWorldPositions2;
-			SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
-			SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
+			//Mat3x3 outWorldPositions2;
+			//SetVector3InMat3x3(outWorldPositions2, 0, dPosition);
+			//SetVector3InMat3x3(outWorldPositions2, 1, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions2, 2, ePosition);
 
 			outLightDotNormal.push_back({ dLightNormal, inLightDotNormal.z, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions2);
+			//outWorldVertexPositions.push_back(outWorldPositions2);
 
 			outputTriangles.push_back(clippedTriangleBCD);
 			outputTriangles.push_back(clippedTriangleDCE);
@@ -905,7 +928,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = (LerpVector3((in_tri.c.normal), (in_tri.b.normal), ld));
 
 			float dLightNormal = LerpFloat(inLightDotNormal.z, inLightDotNormal.y, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 2), GetVector3FromMat3x3(interpWorldVertexPositions, 1), ld);
 
 
 			Point e;
@@ -917,7 +940,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = (LerpVector3((in_tri.a.normal), (in_tri.b.normal), le));
 
 			float eLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.y, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 1), le);
 
 			// make two triangles := {b, d, e}
 			Triangle clippedTriangleBDE;
@@ -925,13 +948,13 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleBDE.b = d;
 			clippedTriangleBDE.c = e;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
-			SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
-			SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 1));
+			//SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
+			//SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.y, dLightNormal, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			//std::cout << "One triangle : = {b, d, e}" << std::endl;
 			outputTriangles.push_back(clippedTriangleBDE);
@@ -952,7 +975,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			d.normal = (LerpVector3((in_tri.a.normal), (in_tri.c.normal), ld));
 
 			float dLightNormal = LerpFloat(inLightDotNormal.x, inLightDotNormal.z, ld);
-			Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
+			//Vector3 dPosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 0), GetVector3FromMat3x3(interpWorldVertexPositions, 2), ld);
 
 
 			Point e;
@@ -964,7 +987,7 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			e.normal = (LerpVector3((in_tri.b.normal), (in_tri.c.normal), le));
 
 			float eLightNormal = LerpFloat(inLightDotNormal.y, inLightDotNormal.z, le);
-			Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
+			//Vector3 ePosition = LerpVector3(GetVector3FromMat3x3(interpWorldVertexPositions, 1), GetVector3FromMat3x3(interpWorldVertexPositions, 2), le);
 
 
 			// make one triangles := {c, d, e}
@@ -973,13 +996,13 @@ int TriangleClipAgainstPlane(const Plane& plane, const Triangle& in_tri, Vector3
 			clippedTriangleCDE.b = d;
 			clippedTriangleCDE.c = e;
 
-			Mat3x3 outWorldPositions1;
-			SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
-			SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
-			SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
+			//Mat3x3 outWorldPositions1;
+			//SetVector3InMat3x3(outWorldPositions1, 0, GetVector3FromMat3x3(interpWorldVertexPositions, 2));
+			//SetVector3InMat3x3(outWorldPositions1, 1, dPosition);
+			//SetVector3InMat3x3(outWorldPositions1, 2, ePosition);
 
 			outLightDotNormal.push_back({ inLightDotNormal.z, dLightNormal, eLightNormal });
-			outWorldVertexPositions.push_back(outWorldPositions1);
+			//outWorldVertexPositions.push_back(outWorldPositions1);
 
 			outputTriangles.push_back(clippedTriangleCDE);
 			//std::cout << "One triangles : = {c, d, e}" << std::endl;
@@ -1061,7 +1084,7 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 	//if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
 	if (cameraCouldSeeTriangle && curTriangleIsVisibleFromCamera)
 	{
-		Mat3x3 worldVertexPositions = { transformedTriangle.a.position, transformedTriangle.b.position, transformedTriangle.c.position };
+		//Mat3x3 worldVertexPositions = { transformedTriangle.a.position, transformedTriangle.b.position, transformedTriangle.c.position };
 
 		//Mat4x4 projectionViewMatrix = projectionMatrix * viewMatrix;
 
@@ -1088,8 +1111,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 		std::vector<Triangle> zClippingOutputTriangles;
 		std::vector<Vector3> zClippingLightDotTriangleVertexNormal;
-		std::vector<Mat3x3> zClippingWorldVertexPositions;
-		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, worldVertexPositions, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal, zClippingWorldVertexPositions);
+		//std::vector<Mat3x3> zClippingWorldVertexPositions;
+		//nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, worldVertexPositions, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal, zClippingWorldVertexPositions);
+		nClippedTriangles = TriangleClipAgainstPlane(planeNear, curLargeTriangle, lightDotTriangleVertexNormal, zClippingOutputTriangles, zClippingLightDotTriangleVertexNormal);
 
 		//if (nClippedTriangles != zClippingLightDotTriangleVertexNormal.size()) {
 		//	std::cout << "NOT EQUAL!!!" << std::endl;
@@ -1135,9 +1159,9 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 				zClippingOutputTriangles[n].b.normal *= invW.y;
 				zClippingOutputTriangles[n].c.normal *= invW.z;
 
-				MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 0, invW.x);
-				MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 1, invW.y);
-				MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 2, invW.z);
+				//MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 0, invW.x);
+				//MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 1, invW.y);
+				//MultiplyFloatToVectorInMat3x3(zClippingWorldVertexPositions[n], 2, invW.z);
 
 				//Transform into Screen Space
 				projectedPointA.x += 1.0f; projectedPointA.y += 1.0f;
@@ -1156,38 +1180,43 @@ void DrawTriangleOnScreenFromWorldTriangleWithClipping(std::vector<unsigned char
 
 				std::vector<Triangle> bottomScreenPlaneClippingResult;
 				std::vector<Vector3> bottomClippingLightDotTriangleNormal;
-				std::vector<Mat3x3> bottomClippingWorldPositions;
-				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], zClippingWorldVertexPositions[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal, bottomClippingWorldPositions);
+				//std::vector<Mat3x3> bottomClippingWorldPositions;
+				//TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], zClippingWorldVertexPositions[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal, bottomClippingWorldPositions);
+				TriangleClipAgainstPlane(planeBottomScreenSpace, curLargeScreenSpaceTriangle, zClippingLightDotTriangleVertexNormal[n], bottomScreenPlaneClippingResult, bottomClippingLightDotTriangleNormal);
 				
 				std::vector<Triangle> topScreenPlaneClippingResult;
 				std::vector<Vector3> topClippingLightDotTriangleNormal;
-				std::vector<Mat3x3> topClippingWorldPositions;
+				//std::vector<Mat3x3> topClippingWorldPositions;
 				for (int i = 0; i < bottomScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], bottomClippingWorldPositions[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal, topClippingWorldPositions);
+					//TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], bottomClippingWorldPositions[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal, topClippingWorldPositions);
+					TriangleClipAgainstPlane(planeTopScreenSpace, bottomScreenPlaneClippingResult[i], bottomClippingLightDotTriangleNormal[i], topScreenPlaneClippingResult, topClippingLightDotTriangleNormal);
 				}
 
 				std::vector<Triangle> leftScreenPlaneClippingResult;
 				std::vector<Vector3> leftClippingLightDotTriangleNormal;
-				std::vector<Mat3x3> leftClippingWorldPositions;
+				//std::vector<Mat3x3> leftClippingWorldPositions;
 				for (int i = 0; i < topScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], topClippingWorldPositions[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal, leftClippingWorldPositions);
+					//TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], topClippingWorldPositions[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal, leftClippingWorldPositions);
+					TriangleClipAgainstPlane(planeLeftScreenSpace, topScreenPlaneClippingResult[i], topClippingLightDotTriangleNormal[i], leftScreenPlaneClippingResult, leftClippingLightDotTriangleNormal);
 				}
 
 				std::vector<Triangle> rightScreenPlaneClippingResult;
 				std::vector<Vector3> rightClippingLightDotTriangleNormal;
-				std::vector<Mat3x3> rightClippingWorldPositions;
+				//std::vector<Mat3x3> rightClippingWorldPositions;
 				for (int i = 0; i < leftScreenPlaneClippingResult.size(); i++)
 				{
-					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], leftClippingWorldPositions[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal, rightClippingWorldPositions);
+					//TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], leftClippingWorldPositions[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal, rightClippingWorldPositions);
+					TriangleClipAgainstPlane(planeRightScreenSpace, leftScreenPlaneClippingResult[i], leftClippingLightDotTriangleNormal[i], rightScreenPlaneClippingResult, rightClippingLightDotTriangleNormal);
 				}
 				//std::cout << "Drawing something." << std::endl;
 				//DrawTriangleOnScreenFromScreenSpaceBoundingBoxMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, curLargeScreenSpaceTriangle, normal, invDepth, invW, lineThickness);
 				for (int i = 0; i < rightScreenPlaneClippingResult.size(); i++)
 				{
 					totalTrianglesRendered++;
-					DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i],rightClippingWorldPositions[i], invDepth, invW, lineThickness);
+					//DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], rightClippingWorldPositions[i], invDepth, invW, lineThickness);
+					DrawTriangleOnScreenFromScreenSpaceBresenhamMethod(imageData, imageDepthData, imageWidth, imageHeight, curTriangleIndex, currentTextureIndex, rightScreenPlaneClippingResult[i], rightClippingLightDotTriangleNormal[i], invDepth, invW, lineThickness);
 				}
 			}
 		}
