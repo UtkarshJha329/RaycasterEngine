@@ -170,26 +170,40 @@ void AddUITreeToCollisionGrid() {
 	}
 }
 
+void SetUIRectStatesToNotHovering(UI_Rect& rootUiRect) {
+
+	rootUiRect.uiRectState = UI_RectState::OnNotHovering;
+
+	for (int i = 0; i < rootUiRect.children.size(); i++)
+	{
+		SetUIRectStatesToNotHovering(UI_Rect::uiRects[rootUiRect.children[i]]);
+	}
+
+}
+
 void UpdateUITreeStates(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
 
 	//HighlightMouseHoveringOverRect(oldMouseX, oldMouseY, mouseX, mouseY);
 	//HighlightMouseHoveringOverRect(mouseX, mouseY, mouseX, mouseY);
 
-	//SetUIRectState(uiRect, mouseX, mouseY);
-	//if (uiRect.uiRectState == UI_RectState::OnHoverEnter || uiRect.uiRectState == UI_RectState::OnHovering) {
-
-	//	for (int i = 0; i < uiRect.children.size(); i++)
-	//	{
-	//		SetUIRectState(UI_Rect::uiRects[uiRect.children[i]], mouseX, mouseY);
-	//	}
-
-	//}
-	//else {
-	//	// need to update the rest of the tree to false anyway.
-	//}
-
-	for (int i = 0; i < UI_Rect::uiRects.size(); i++)
+	SetUIRectState(uiRect, mouseX, mouseY);
+	if (uiRect.uiRectState != UI_RectState::OnNotHovering)
 	{
-		SetUIRectState(UI_Rect::uiRects[i], mouseX, mouseY);
+		for (int i = 0; i < uiRect.children.size(); i++)
+		{
+			UpdateUITreeStates(UI_Rect::uiRects[uiRect.children[i]], mouseX, mouseY);
+		}
 	}
+	else
+	{
+		for (int i = 0; i < uiRect.children.size(); i++)
+		{
+			SetUIRectStatesToNotHovering(UI_Rect::uiRects[uiRect.children[i]]);
+		}
+	}
+
+	//for (int i = 0; i < UI_Rect::uiRects.size(); i++)
+	//{
+	//	SetUIRectState(UI_Rect::uiRects[i], mouseX, mouseY);
+	//}
 }
