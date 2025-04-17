@@ -181,12 +181,23 @@ void SetUIRectStatesToNotHovering(UI_Rect& rootUiRect) {
 
 }
 
+void UpdateUIRectStates(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
+	SetUIRectState(uiRect, mouseX, mouseY);
+	if (uiRect.uiRectState == UI_RectState::OnHovering) {
+		uiRect.colour = ColourToVector4(uiRect.mouseHoverColour);
+	}
+	else if (uiRect.uiRectState == UI_RectState::OnHoverExit) {
+		uiRect.colour = ColourToVector4(uiRect.normalColour);
+	}
+}
+
 void UpdateUITreeStates(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
 
 	//HighlightMouseHoveringOverRect(oldMouseX, oldMouseY, mouseX, mouseY);
 	//HighlightMouseHoveringOverRect(mouseX, mouseY, mouseX, mouseY);
 
-	SetUIRectState(uiRect, mouseX, mouseY);
+	UpdateUIRectStates(uiRect, mouseX, mouseY);
+	//SetUIRectState(uiRect, mouseX, mouseY);
 	if (uiRect.uiRectState != UI_RectState::OnNotHovering)
 	{
 		for (int i = 0; i < uiRect.children.size(); i++)

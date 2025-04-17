@@ -316,6 +316,8 @@ int main()
 
     const int rootUIRectIndex = UI_Rect::uiRects.size();
     UI_Rect::uiRects.push_back({ rootUIRectIndex, { 10.0f, 10.0f, 0.0f }, { 400.0f, 500.0f, 0.0f }, { colour_red.r, colour_red.g, colour_red.b, colour_red.a }, MiddleMiddle });
+    UI_Rect::uiRects[rootUIRectIndex].normalColour = colour_red;
+    UI_Rect::uiRects[rootUIRectIndex].mouseHoverColour = colour_green;
 
     int numChildrenUIRects = 4;
     int numChildrenForChildren = 4;
@@ -326,7 +328,10 @@ int main()
         someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
         someChildUIRect.end = { 150.0f, 150.0f, 0.0f };
         someChildUIRect.index = UI_Rect::uiRects.size();
-        someChildUIRect.colour = ColourToVector4(colour_yellow);
+        //someChildUIRect.colour = ColourToVector4(colour_yellow);
+
+        someChildUIRect.normalColour = colour_yellow;
+        someChildUIRect.mouseHoverColour = colour_red;
 
         if (i == 0) {
             someChildUIRect.anchorPosition = TopLeft;
@@ -357,8 +362,11 @@ int main()
             UI_Rect someChildUIRect;
             someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
             someChildUIRect.end = { 50.0f, 50.0f, 0.0f };
-            someChildUIRect.colour = { colour_blue.r, colour_blue.g, colour_blue.b, colour_blue.a };
+            //someChildUIRect.colour = { colour_blue.r, colour_blue.g, colour_blue.b, colour_blue.a };
             someChildUIRect.index = UI_Rect::uiRects.size();
+
+            someChildUIRect.normalColour = colour_blue;
+            someChildUIRect.mouseHoverColour = colour_pink;
 
             if (j == 0) {
                 someChildUIRect.anchorPosition = TopMiddle;
@@ -378,6 +386,11 @@ int main()
             UI_Rect::uiRects.push_back(someChildUIRect);
 
         }
+    }
+
+    for (int i = 0; i < UI_Rect::uiRects.size(); i++)
+    {
+        UI_Rect::uiRects[i].colour = ColourToVector4(UI_Rect::uiRects[i].normalColour);
     }
 
     RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);

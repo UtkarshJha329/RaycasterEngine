@@ -40,6 +40,9 @@ struct UI_Rect {
 	Vector3 worldStartPos;
 	Vector3 worldEndPos;
 
+	Colour normalColour;
+	Colour mouseHoverColour;
+
 	std::vector<unsigned int> children;
 
 	static std::vector<UI_Rect> uiRects;
