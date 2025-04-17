@@ -53,6 +53,14 @@ public:
 	Point pointOnPlane;
 };
 
+Vector4 ColourToVector4(const Colour& curColour) {
+	return Vector4{ curColour.r, curColour.g, curColour.b, curColour.a };
+}
+
+Colour Vector4ToColour(const Vector4& curColour) {
+	return Colour{ (unsigned char)curColour.x, (unsigned char)curColour.y, (unsigned char)curColour.z, (unsigned char)curColour.w };
+}
+
 float EdgeFunction(const Vector3& a, const Vector3& b, const Vector3& c)
 {
 	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);

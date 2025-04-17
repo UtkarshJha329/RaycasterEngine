@@ -40,5 +40,5 @@ const Vector3 worldForward = Vector3{ 0.0f, 0.0f, 1.0f };
 
 
 // UI Collision Grid
-const Vector2Int collisionGridCellSize = { 40.0f, 40.0f };
+const Vector2Int collisionGridCellSize = { 80.0f, 80.0f };
 const Vector2Int numGridsOnScreen = { (int)screenWidth / (int)collisionGridCellSize.x, (int)screenHeight / (int)collisionGridCellSize.y };

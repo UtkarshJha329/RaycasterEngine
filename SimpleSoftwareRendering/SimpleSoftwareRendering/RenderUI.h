@@ -16,7 +16,9 @@ void RenderRectangleOnScreen(const Vector3& start, const Vector3& end, const Vec
 	{
 		for (int x = startX; x < endX; x++)
 		{
-			int curRedIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ x, screenHeight - y }, imageWidth);
+			int curRedIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ x, screenHeight - y - 1 }, imageWidth);
+			//int curRedIndex = GetRedFlattenedImageDataSlotForPixel(Vector2Int{ x, y }, imageWidth);
+
 			imageData[curRedIndex + 0] = uiRectColour.x;
 			imageData[curRedIndex + 1] = uiRectColour.y;
 			imageData[curRedIndex + 2] = uiRectColour.z;
@@ -168,28 +170,26 @@ void AddUITreeToCollisionGrid() {
 	}
 }
 
-void HighlightMouseHoveringOverRect(const float& mouseX, const float& mouseY) {
+void UpdateUITreeStates(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
 
-	if (mouseX >= 0 && mouseX < screenWidth && mouseY >= 0 && mouseY <= screenHeight) {
+	//HighlightMouseHoveringOverRect(oldMouseX, oldMouseY, mouseX, mouseY);
+	//HighlightMouseHoveringOverRect(mouseX, mouseY, mouseX, mouseY);
 
-		//std::cout << "Valid Mouse Position." << std::endl;
+	//SetUIRectState(uiRect, mouseX, mouseY);
+	//if (uiRect.uiRectState == UI_RectState::OnHoverEnter || uiRect.uiRectState == UI_RectState::OnHovering) {
 
-		Vector2Int collisionGridCoords = { (int)mouseX / (int)collisionGridCellSize.x, (int)mouseY / (int)collisionGridCellSize.y };
+	//	for (int i = 0; i < uiRect.children.size(); i++)
+	//	{
+	//		SetUIRectState(UI_Rect::uiRects[uiRect.children[i]], mouseX, mouseY);
+	//	}
 
-		int collisionGridIndex = GetUICollisionGridIndex(collisionGridCoords.x, collisionGridCoords.y, numGridsOnScreen.x);
-		if (collisionGridIndex >= 0 && collisionGridIndex < UI_CollisionGrid::uiRectIndexInCollisionGrid.size()) {
+	//}
+	//else {
+	//	// need to update the rest of the tree to false anyway.
+	//}
 
-			//std::cout << "Found Valid Grid Cell Position." << collisionGridIndex << ", " << UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex].size() << std::endl;
-			//std::cout << "Found Valid Grid Cell Position := " << collisionGridIndex << std::endl;
-
-			for (int i = 0; i < UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex].size(); i++)
-			{
-				//std::cout << "Going to check uiRectIndex := " << UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i] << std::endl;
-				if (PointLiesInsideUIRect(UI_Rect::uiRects[UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i]], { mouseX, screenHeight - mouseY })) {
-					std::cout << "Point lies inside rect := ";
-					std::cout << UI_Rect::uiRects[UI_CollisionGrid::uiRectIndexInCollisionGrid[collisionGridIndex][i]].index << std::endl;
-				}
-			}
-		}
+	for (int i = 0; i < UI_Rect::uiRects.size(); i++)
+	{
+		SetUIRectState(UI_Rect::uiRects[i], mouseX, mouseY);
 	}
 }

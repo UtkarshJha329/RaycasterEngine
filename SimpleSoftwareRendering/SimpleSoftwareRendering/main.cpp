@@ -325,20 +325,24 @@ int main()
         UI_Rect someChildUIRect;
         someChildUIRect.start = { 0.0f, 0.0f, 0.0f };
         someChildUIRect.end = { 150.0f, 150.0f, 0.0f };
-        someChildUIRect.colour = { colour_yellow.r, colour_yellow.g, colour_yellow.b, colour_yellow.a };
         someChildUIRect.index = UI_Rect::uiRects.size();
+        someChildUIRect.colour = ColourToVector4(colour_yellow);
 
         if (i == 0) {
             someChildUIRect.anchorPosition = TopLeft;
+            //someChildUIRect.colour = ColourToVector4(colour_blue);
         }
         else if (i == 1) {
             someChildUIRect.anchorPosition = TopRight;
+            //someChildUIRect.colour = ColourToVector4(colour_red);
         }
         else if (i == 2) {
             someChildUIRect.anchorPosition = BottomLeft;
+            //someChildUIRect.colour = ColourToVector4(colour_green);
         }
         else if (i == 3) {
             someChildUIRect.anchorPosition = BottomRight;
+            //someChildUIRect.colour = ColourToVector4(colour_black);
         }
 
 
@@ -466,7 +470,7 @@ int main()
             }
             if (glm::abs(cameraYRot) >= glm::radians(clampCameraYRot)) {
                 cameraYRot = 0.0f;
-            }            
+            }
         }
         else {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -515,10 +519,18 @@ int main()
 
         //std::cout << (int)mouseX / (int)collisionGridCellSize.x << ", " << (int)(screenHeight - mouseY) / (int)collisionGridCellSize.y << std::endl;
 
+        UpdateUITreeStates(UI_Rect::uiRects[rootUIRectIndex], mouseX, mouseY);
         RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);
-        float screenYFlipped = screenHeight - mouseY;
-        float mouseXVal = mouseX;
-        HighlightMouseHoveringOverRect(mouseXVal, screenYFlipped);
+
+        //float screenY = mouseY;
+        //if (mouseX >= 0 && mouseX < screenWidth && screenY >= 0 && screenY < screenHeight) {
+        //    Vector2Int collisionGridCoords = { (int)mouseX / (int)collisionGridCellSize.x, (int)screenY / (int)collisionGridCellSize.y };
+        //    Vector3 start = { collisionGridCoords.x * collisionGridCellSize.x, collisionGridCoords.y * collisionGridCellSize.y, 0.0f };
+        //    Vector3 end = start + Vector3{ collisionGridCellSize.x, collisionGridCellSize.y, 0.0f };
+        //    Vector4 colourOfGridSection = ColourToVector4(colour_pink);
+        //    colourOfGridSection.w = 125;
+        //    RenderRectangleOnScreen(start, end, colourOfGridSection, screenWidth, screenHeight, imageData);
+        //}
 
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screenWidth, screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());

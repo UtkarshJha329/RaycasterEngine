@@ -49,14 +49,6 @@ int GetRedFlattenedImageDataSlotForPixel(Vector2Int pixelPos, int imageWidth) {
 	return (pixelPos.x + pixelPos.y * imageWidth) * 4;
 }
 
-Vector4 ColourToVector4(const Colour& curColour) {
-	return Vector4{ curColour.r, curColour.g, curColour.b, curColour.a };
-}
-
-Colour Vector4ToColour(const Vector4& curColour) {
-	return Colour{ (unsigned char)curColour.x, (unsigned char)curColour.y, (unsigned char)curColour.z, (unsigned char)curColour.w };
-}
-
 int GetFlattenedImageDataSlotForDepthData(Vector2Int pixelPos, int imageWidth) {
 	return (pixelPos.x + pixelPos.y * imageWidth);
 }
