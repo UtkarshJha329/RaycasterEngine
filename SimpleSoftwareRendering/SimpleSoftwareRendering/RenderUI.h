@@ -1,7 +1,8 @@
 #pragma once
 
-#include "RenderGeometry.h"
+#include "Input.h"
 
+#include "RenderGeometry.h"
 #include "UIGeometry.h"
 
 void RenderRectangleOnScreen(const Vector3& start, const Vector3& end, const Vector4& uiRectColour, const int& imageWidth, const int& imageHeight, std::vector<unsigned char>& imageData) {
@@ -222,65 +223,21 @@ void UpdateUITreeStates(UI_Rect& uiRect, const float& mouseX, const float& mouse
 void MakeHoveringUIRectsFollowCursorMovement(const int& childIndex, const float& mouseDeltaX, const float& mouseDeltaY) {
 
 	if (childIndex != 0) {
-
-		//std::cout << "Attempting to move." << std::endl;
-
 		AddDeltaToUIRectLocalPosition(childIndex, mouseDeltaX, mouseDeltaY);
-
-		//UI_Rect& childUIRect = UI_Rect::uiRects[childIndex];
-		//const UI_Rect& parentRect = UI_Rect::uiRects[childUIRect.parentIndex];
-
-		//float parentWidth = GetUIRectWidth(parentRect);
-		//float parentHeight = GetUIRectHeight(parentRect);
-
-		//if (mouseDeltaX < parentWidth && mouseDeltaY < parentHeight) {
-
-		//	Vector3 deltaX = { mouseDeltaX, 0.0f, 0.0f };
-		//	Vector3 deltaY = { 0.0f, mouseDeltaY, 0.0f };
-
-		//	Vector3 modifiedWorldStartByX = childUIRect.worldStartPos + deltaX;
-		//	Vector3 modifiedWorldEndByX = childUIRect.worldEndPos + deltaX;
-
-		//	if (PointLiesInsideUIRect(parentRect, modifiedWorldStartByX) && PointLiesInsideUIRect(parentRect, modifiedWorldEndByX)) {
-
-		//		//std::cout << "Moved rect on X." << std::endl;
-
-		//		childUIRect.worldStartPos = modifiedWorldStartByX;
-		//		childUIRect.worldEndPos = modifiedWorldEndByX;
-
-		//		childUIRect.start += deltaX;
-		//		childUIRect.end += deltaX;
-		//	}
-		//	else {
-		//		//std::cout << "Failed to move within bounds X. DeltaX := " << mouseDeltaX << std::endl;
-		//	}
-
-		//	Vector3 modifiedWorldStartByY = childUIRect.worldStartPos + deltaY;
-		//	Vector3 modifiedWorldEndByY = childUIRect.worldEndPos + deltaY;
-
-		//	if (PointLiesInsideUIRect(parentRect, modifiedWorldStartByY) && PointLiesInsideUIRect(parentRect, modifiedWorldEndByY)) {
-
-		//		//std::cout << "Moved rect on Y." << std::endl;
-
-		//		childUIRect.worldStartPos = modifiedWorldStartByY;
-		//		childUIRect.worldEndPos = modifiedWorldEndByY;
-
-		//		childUIRect.start += deltaY;
-		//		childUIRect.end += deltaY;
-		//	}
-		//	else {
-		//		//std::cout << "Failed to move within bounds Y. DeltaY := " << mouseDeltaY << std::endl;
-		//	}
-		//}
 	}
 }
+
+int curSelectedUIRectIndex = -1;
 
 void HandleUIEvents(const float& mouseDeltaX, const float& mouseDeltaY) {
 
 	while (!uiEvents.empty()) {
-		if (uiEvents.top().state == UI_RectState::OnHovering) {
+		if (uiEvents.top().state == UI_RectState::OnHovering && GetKeyHeld(MOUSE_BUTTON_LEFT)) {
 
-			MakeHoveringUIRectsFollowCursorMovement(uiEvents.top().uiRectId, mouseDeltaX, mouseDeltaY);
+			if (curSelectedUIRectIndex == -1 || UI_Rect::uiRects[uiEvents.top().uiRectId].index == curSelectedUIRectIndex) {
+				curSelectedUIRectIndex = uiEvents.top().uiRectId;
+				MakeHoveringUIRectsFollowCursorMovement(uiEvents.top().uiRectId, mouseDeltaX, mouseDeltaY);
+			}
 		}
 
 		uiEvents.pop();

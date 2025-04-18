@@ -7,22 +7,30 @@
 #include "Geometry.h"
 
 enum AnchorPosition {
+
 	TopLeft,
 	TopMiddle,
 	TopRight,
+
 	MiddleLeft,
 	MiddleMiddle,
 	MiddleRight,
+
 	BottomLeft,
 	BottomMiddle,
 	BottomRight
 };
 
 enum UI_RectState {
+
 	OnHoverEnter,
 	OnHovering,
 	OnHoverExit,
-	OnNotHovering
+	OnNotHovering,
+
+	OnClick,
+	OnClickHeld,
+	OnClickRelease
 };
 
 struct UI_Rect {

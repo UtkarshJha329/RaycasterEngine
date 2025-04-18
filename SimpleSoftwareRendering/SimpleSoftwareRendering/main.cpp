@@ -554,6 +554,10 @@ int main()
 
         //std::cout << (int)mouseX / (int)collisionGridCellSize.x << ", " << (int)(screenHeight - mouseY) / (int)collisionGridCellSize.y << std::endl;
 
+        if (GetKeyReleasedInThisFrame(MOUSE_BUTTON_LEFT)) {
+            curSelectedUIRectIndex = -1;
+        }
+
         UpdateUITreeStates(UI_Rect::uiRects[rootUIRectIndex], mouseX, mouseY);
         HandleUIEvents(mouseX - mouseXFromPreviousFrame, mouseY - mouseYFromPreviousFrame);
         RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);

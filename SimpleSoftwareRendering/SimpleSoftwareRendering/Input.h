@@ -54,6 +54,7 @@ enum KeyAction {
 	RELEASED
 };
 
+// Turn into map.
 int KeyIndex(KeyCode keyCode) {
 
 	if (keyCode == MOUSE_BUTTON_LEFT) {
@@ -161,4 +162,7 @@ void ResetKeysReleased() {
 	keyReleasedInThisFrame[KeyIndex(KEY_P)] = false;
 	keyReleasedInThisFrame[KeyIndex(KEY_I)] = false;
 	keyReleasedInThisFrame[KeyIndex(KEY_O)] = false;
+
+	keyReleasedInThisFrame[KeyIndex(MOUSE_BUTTON_LEFT)] = false;
+	keyReleasedInThisFrame[KeyIndex(MOUSE_BUTTON_RIGHT)] = false;
 }

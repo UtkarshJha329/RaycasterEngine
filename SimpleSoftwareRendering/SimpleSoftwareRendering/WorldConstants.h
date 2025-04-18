@@ -3,9 +3,10 @@
 #include "Colour.h"
 #include "Geometry.h"
 
+
+// Window Dimensions
 const unsigned int screenWidth = 800;
 const unsigned int screenHeight = 600;
-
 
 // Planes
 const float nearPlaneDistance = 0.1f;
