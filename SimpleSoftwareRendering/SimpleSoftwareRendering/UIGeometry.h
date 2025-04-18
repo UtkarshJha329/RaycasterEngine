@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stack>
 #include <vector>
 
 #include "WorldConstants.h"
@@ -37,6 +38,8 @@ struct UI_Rect {
 
 	UI_RectState uiRectState = UI_RectState::OnNotHovering;
 
+	int parentIndex;
+
 	Vector3 worldStartPos;
 	Vector3 worldEndPos;
 
@@ -60,12 +63,98 @@ bool PointLiesInsideUIRect(const UI_Rect& uiRect, const Vector2& point) {
 }
 
 float GetUIRectWidth(const UI_Rect& uiRect) {
-	return uiRect.end.x - uiRect.start.x;
+	return abs(uiRect.end.x - uiRect.start.x);
 }
 
 float GetUIRectHeight(const UI_Rect& uiRect) {
-	return uiRect.end.y - uiRect.start.y;
+	return abs(uiRect.end.y - uiRect.start.y);
 }
+
+bool AddDeltaToUIRectLocalPosition(const int& uiRectIndex, const float& deltaX, const float& deltaY) {
+
+	UI_Rect& uiRect = UI_Rect::uiRects[uiRectIndex];
+	UI_Rect& parentUIRect = UI_Rect::uiRects[uiRect.parentIndex];
+
+	//Vector3 DeltaX = Vector3{ deltaX, 0.0f, 0.0f };
+	//Vector3 DeltaY = Vector3{ 0.0f, deltaY, 0.0f };
+
+	//Vector3 modifiedWorldStartX = uiRect.worldStartPos + DeltaX;
+	//Vector3 modifiedWorldEndX = uiRect.worldEndPos + DeltaX;
+
+	//bool modifiedXLiesInside = PointLiesInsideUIRect(parentUIRect, modifiedWorldStartX) && PointLiesInsideUIRect(parentUIRect, modifiedWorldEndX);
+
+	//Vector3 modifiedWorldStartY = uiRect.worldStartPos + DeltaY;
+	//Vector3 modifiedWorldEndY = uiRect.worldEndPos + DeltaY;
+
+	//bool modifiedYLiesInside = PointLiesInsideUIRect(parentUIRect, modifiedWorldStartY) && PointLiesInsideUIRect(parentUIRect, modifiedWorldEndY);
+
+	Vector3 delta = Vector3{ deltaX, deltaY, 0.0f };
+
+	Vector3 modifiedWorldStart = uiRect.worldStartPos + delta;
+	Vector3 modifiedWorldEnd = uiRect.worldEndPos + delta;
+
+	bool modifiedStartAndEndLieInside = PointLiesInsideUIRect(parentUIRect, modifiedWorldStart) && PointLiesInsideUIRect(parentUIRect, modifiedWorldEnd);
+
+	if (modifiedStartAndEndLieInside) {
+
+		uiRect.worldStartPos += delta;
+		uiRect.worldEndPos += delta;
+
+		if (uiRect.anchorPosition == AnchorPosition::TopLeft) {
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::TopMiddle) {
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::TopRight) {
+			delta.x *= -1.0f;
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::MiddleLeft) {
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::MiddleMiddle) {
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::MiddleRight) {
+			delta.x *= -1.0f;
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::BottomLeft) {
+			delta.y *= -1.0f;
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::BottomMiddle) {
+			delta.y *= -1.0f;
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+		if (uiRect.anchorPosition == AnchorPosition::BottomRight) {
+			delta *= -1.0f;
+			uiRect.start += delta;
+			uiRect.end += delta;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+struct UIEventsData {
+	int uiRectId;
+	UI_RectState state;
+};
+
+std::stack<UIEventsData> uiEvents;
+
 
 void SetUIRectState(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
 
@@ -95,6 +184,18 @@ void SetUIRectState(UI_Rect& uiRect, const float& mouseX, const float& mouseY) {
 		}
 	}
 
+	uiEvents.push({ uiRect.index, uiRect.uiRectState });
+
+}
+
+// Adds a copy! Not the one provided!
+void AddUIRectAsChildToUIRect(UI_Rect& child, const int& parentIndex) {
+
+	child.parentIndex = parentIndex;
+
+	int childIndex = UI_Rect::uiRects.size();
+	UI_Rect::uiRects.push_back(child);
+	UI_Rect::uiRects[parentIndex].children.push_back(childIndex);
 }
 
 struct UI_CollisionGrid {

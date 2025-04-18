@@ -315,7 +315,7 @@ int main()
 
 
     const int rootUIRectIndex = UI_Rect::uiRects.size();
-    UI_Rect::uiRects.push_back({ rootUIRectIndex, { 10.0f, 10.0f, 0.0f }, { 400.0f, 500.0f, 0.0f }, { colour_red.r, colour_red.g, colour_red.b, colour_red.a }, MiddleMiddle });
+    UI_Rect::uiRects.push_back({ rootUIRectIndex, { -200.0f, -250.0f, 0.0f }, { 200.0f, 250.0f, 0.0f }, { colour_red.r, colour_red.g, colour_red.b, colour_red.a }, MiddleMiddle });
     UI_Rect::uiRects[rootUIRectIndex].normalColour = colour_red;
     UI_Rect::uiRects[rootUIRectIndex].mouseHoverColour = colour_green;
 
@@ -333,6 +333,8 @@ int main()
         someChildUIRect.normalColour = colour_yellow;
         someChildUIRect.mouseHoverColour = colour_red;
 
+
+
         if (i == 0) {
             someChildUIRect.anchorPosition = TopLeft;
             //someChildUIRect.colour = ColourToVector4(colour_blue);
@@ -342,17 +344,23 @@ int main()
             //someChildUIRect.colour = ColourToVector4(colour_red);
         }
         else if (i == 2) {
+            someChildUIRect.start = { 0.0f, 150.0f, 0.0f };
+            someChildUIRect.end = { 150.0f, 0.0f, 0.0f };
             someChildUIRect.anchorPosition = BottomLeft;
             //someChildUIRect.colour = ColourToVector4(colour_green);
         }
         else if (i == 3) {
+            someChildUIRect.start = { 150.0f, 150.0f, 0.0f };
+            someChildUIRect.end = { 0.0f, 0.0f, 0.0f };
             someChildUIRect.anchorPosition = BottomRight;
             //someChildUIRect.colour = ColourToVector4(colour_black);
         }
 
 
-        UI_Rect::uiRects[rootUIRectIndex].children.push_back(someChildUIRect.index);
-        UI_Rect::uiRects.push_back(someChildUIRect);
+        //UI_Rect::uiRects[rootUIRectIndex].children.push_back(someChildUIRect.index);
+        //UI_Rect::uiRects.push_back(someChildUIRect);
+
+        AddUIRectAsChildToUIRect(someChildUIRect, rootUIRectIndex);
     }
 
     for (int i = 0; i < numChildrenUIRects; i++)
@@ -368,23 +376,37 @@ int main()
             someChildUIRect.normalColour = colour_blue;
             someChildUIRect.mouseHoverColour = colour_pink;
 
+
             if (j == 0) {
                 someChildUIRect.anchorPosition = TopMiddle;
+                someChildUIRect.start.x = -25.0f;
+                someChildUIRect.end.x = 25.0f;
             }
             else if (j == 1) {
+                someChildUIRect.start.y = -25.0f;
+                someChildUIRect.end.y = 25.0f;
+                someChildUIRect.start.x = 50.0f;
+                someChildUIRect.end.x = 0.0f;
                 someChildUIRect.anchorPosition = MiddleRight;
             }
             else if (j == 2) {
+                someChildUIRect.start.x = -25.0f;
+                someChildUIRect.end.x = 25.0f;
+                someChildUIRect.start.y = 50.0f;
+                someChildUIRect.end.y = 0.0f;
                 someChildUIRect.anchorPosition = BottomMiddle;
             }
             else if (j == 3) {
+                someChildUIRect.start.y = -25.0f;
+                someChildUIRect.end.y = 25.0f;
                 someChildUIRect.anchorPosition = MiddleLeft;
             }
 
             //rootUIRect.children[i].children.push_back(someChildUIRect);
-            UI_Rect::uiRects[UI_Rect::uiRects[rootUIRectIndex].children[i]].children.push_back(someChildUIRect.index);
-            UI_Rect::uiRects.push_back(someChildUIRect);
+            //UI_Rect::uiRects[UI_Rect::uiRects[rootUIRectIndex].children[i]].children.push_back(someChildUIRect.index);
+            //UI_Rect::uiRects.push_back(someChildUIRect);
 
+            AddUIRectAsChildToUIRect(someChildUIRect, UI_Rect::uiRects[rootUIRectIndex].children[i]);
         }
     }
 
@@ -533,6 +555,7 @@ int main()
         //std::cout << (int)mouseX / (int)collisionGridCellSize.x << ", " << (int)(screenHeight - mouseY) / (int)collisionGridCellSize.y << std::endl;
 
         UpdateUITreeStates(UI_Rect::uiRects[rootUIRectIndex], mouseX, mouseY);
+        HandleUIEvents(mouseX - mouseXFromPreviousFrame, mouseY - mouseYFromPreviousFrame);
         RenderUITree(UI_Rect::uiRects[rootUIRectIndex], screenWidth, screenHeight, imageData);
 
         //float screenY = mouseY;

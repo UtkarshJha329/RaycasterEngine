@@ -39,24 +39,24 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float width = GetUIRectWidth(uiRect);
 		float widthParent = GetUIRectWidth(parentUIRect);
 
-		start = { (widthParent / 2) - (width / 2), uiRect.start.y, uiRect.start.z };
-		end = { (widthParent / 2) + (width / 2), uiRect.end.y, uiRect.end.z };
+		start = { (widthParent / 2) + (uiRect.start.x), uiRect.start.y, uiRect.start.z };
+		end = { (widthParent / 2) + (uiRect.end.x), uiRect.end.y, uiRect.end.z };
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::TopRight) {
 
 		float width = GetUIRectWidth(uiRect);
 		float widthParent = GetUIRectWidth(parentUIRect);
 
-		start = { widthParent - width, uiRect.start.y, uiRect.start.z };
-		end = { widthParent, uiRect.end.y, uiRect.end.z };
+		start = { widthParent - uiRect.end.x, uiRect.start.y, uiRect.start.z };
+		end = { widthParent - uiRect.start.x, uiRect.end.y, uiRect.end.z };
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::MiddleLeft) {
 
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { uiRect.start.x, (heightParent / 2) - (height / 2), uiRect.start.z};
-		end = { uiRect.end.x, (heightParent / 2) + (height / 2), uiRect.end.z };
+		start = { uiRect.start.x, (heightParent / 2) + uiRect.start.y, uiRect.start.z};
+		end = { uiRect.end.x, (heightParent / 2) + uiRect.end.y, uiRect.end.z };
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::MiddleMiddle) {
 
@@ -66,8 +66,8 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { (widthParent / 2) - (width / 2), (heightParent / 2) - (height / 2), uiRect.start.z };
-		end = { (widthParent / 2) + (width / 2), (heightParent / 2) + (height / 2), uiRect.end.z };
+		start = { (widthParent / 2) + (uiRect.start.x), (heightParent / 2) + (uiRect.start.y), uiRect.start.z };
+		end = { (widthParent / 2) + (uiRect.end.x), (heightParent / 2) + (uiRect.end.y), uiRect.end.z };
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::MiddleRight) {
 
@@ -77,8 +77,8 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { widthParent - width, (heightParent / 2) - (height / 2), uiRect.start.z };
-		end = { widthParent, (heightParent / 2) + (height / 2), uiRect.end.z };
+		start = { widthParent - uiRect.start.x, (heightParent / 2) + (uiRect.start.y), uiRect.start.z };
+		end = { widthParent - uiRect.end.x, (heightParent / 2) + (uiRect.end.y), uiRect.end.z };
 
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::BottomLeft) {
@@ -86,8 +86,8 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { uiRect.start.x, heightParent - height, uiRect.start.z };
-		end = { uiRect.end.x, heightParent, uiRect.end.z };
+		start = { uiRect.start.x, heightParent - uiRect.start.y, uiRect.start.z };
+		end = { uiRect.end.x, heightParent - uiRect.end.y, uiRect.end.z };
 
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::BottomMiddle) {
@@ -98,8 +98,8 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { (widthParent / 2) - (width / 2), heightParent - height, uiRect.start.z };
-		end = { (widthParent / 2) + (width / 2), heightParent, uiRect.end.z };
+		start = { (widthParent / 2) + (uiRect.start.x), heightParent - uiRect.start.y, uiRect.start.z };
+		end = { (widthParent / 2) + (uiRect.end.x), heightParent - uiRect.end.y, uiRect.end.z };
 	}
 	else if (uiRect.anchorPosition == AnchorPosition::BottomRight) {
 
@@ -109,8 +109,8 @@ void TransformUIPositionsToParentSpaceBasedOnAnchor(Vector3& start, Vector3& end
 		float height = GetUIRectHeight(uiRect);
 		float heightParent = GetUIRectHeight(parentUIRect);
 
-		start = { widthParent - width, heightParent - height, uiRect.start.z };
-		end = { widthParent, heightParent, uiRect.end.z };
+		start = { widthParent - uiRect.start.x, heightParent - uiRect.start.y, uiRect.start.z };
+		end = { widthParent - uiRect.end.x, heightParent - uiRect.end.y, uiRect.end.z };
 	}
 }
 
@@ -217,4 +217,73 @@ void UpdateUITreeStates(UI_Rect& uiRect, const float& mouseX, const float& mouse
 	//{
 	//	SetUIRectState(UI_Rect::uiRects[i], mouseX, mouseY);
 	//}
+}
+
+void MakeHoveringUIRectsFollowCursorMovement(const int& childIndex, const float& mouseDeltaX, const float& mouseDeltaY) {
+
+	if (childIndex != 0) {
+
+		//std::cout << "Attempting to move." << std::endl;
+
+		AddDeltaToUIRectLocalPosition(childIndex, mouseDeltaX, mouseDeltaY);
+
+		//UI_Rect& childUIRect = UI_Rect::uiRects[childIndex];
+		//const UI_Rect& parentRect = UI_Rect::uiRects[childUIRect.parentIndex];
+
+		//float parentWidth = GetUIRectWidth(parentRect);
+		//float parentHeight = GetUIRectHeight(parentRect);
+
+		//if (mouseDeltaX < parentWidth && mouseDeltaY < parentHeight) {
+
+		//	Vector3 deltaX = { mouseDeltaX, 0.0f, 0.0f };
+		//	Vector3 deltaY = { 0.0f, mouseDeltaY, 0.0f };
+
+		//	Vector3 modifiedWorldStartByX = childUIRect.worldStartPos + deltaX;
+		//	Vector3 modifiedWorldEndByX = childUIRect.worldEndPos + deltaX;
+
+		//	if (PointLiesInsideUIRect(parentRect, modifiedWorldStartByX) && PointLiesInsideUIRect(parentRect, modifiedWorldEndByX)) {
+
+		//		//std::cout << "Moved rect on X." << std::endl;
+
+		//		childUIRect.worldStartPos = modifiedWorldStartByX;
+		//		childUIRect.worldEndPos = modifiedWorldEndByX;
+
+		//		childUIRect.start += deltaX;
+		//		childUIRect.end += deltaX;
+		//	}
+		//	else {
+		//		//std::cout << "Failed to move within bounds X. DeltaX := " << mouseDeltaX << std::endl;
+		//	}
+
+		//	Vector3 modifiedWorldStartByY = childUIRect.worldStartPos + deltaY;
+		//	Vector3 modifiedWorldEndByY = childUIRect.worldEndPos + deltaY;
+
+		//	if (PointLiesInsideUIRect(parentRect, modifiedWorldStartByY) && PointLiesInsideUIRect(parentRect, modifiedWorldEndByY)) {
+
+		//		//std::cout << "Moved rect on Y." << std::endl;
+
+		//		childUIRect.worldStartPos = modifiedWorldStartByY;
+		//		childUIRect.worldEndPos = modifiedWorldEndByY;
+
+		//		childUIRect.start += deltaY;
+		//		childUIRect.end += deltaY;
+		//	}
+		//	else {
+		//		//std::cout << "Failed to move within bounds Y. DeltaY := " << mouseDeltaY << std::endl;
+		//	}
+		//}
+	}
+}
+
+void HandleUIEvents(const float& mouseDeltaX, const float& mouseDeltaY) {
+
+	while (!uiEvents.empty()) {
+		if (uiEvents.top().state == UI_RectState::OnHovering) {
+
+			MakeHoveringUIRectsFollowCursorMovement(uiEvents.top().uiRectId, mouseDeltaX, mouseDeltaY);
+		}
+
+		uiEvents.pop();
+	}
+
 }
