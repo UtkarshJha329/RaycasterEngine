@@ -62,5 +62,14 @@
     <ClInclude Include="DebugUtilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RenderUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UIGeometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UISimulation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
